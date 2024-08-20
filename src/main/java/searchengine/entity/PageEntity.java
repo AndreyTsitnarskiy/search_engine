@@ -28,4 +28,5 @@ public class PageEntity {
     @OneToMany(mappedBy = "pageEntity", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<IndexEntity> indices;
 
+
 }
