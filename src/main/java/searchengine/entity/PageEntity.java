@@ -1,11 +1,13 @@
 package searchengine.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
 
 import java.util.List;
 
 @Entity
 @Table(name = "page", schema = "sites_parsing")
+@Data
 public class PageEntity {
 
     @Id
@@ -26,7 +28,5 @@ public class PageEntity {
     private String content;
 
     @OneToMany(mappedBy = "pageEntity", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<IndexEntity> indices;
-
-
+    private List<IndexEntity> indexes;
 }

@@ -1,10 +1,12 @@
 package searchengine.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Data
 @Entity
 @Table(name = "site", schema = "sites_parsing")
 public class SiteEntity {
