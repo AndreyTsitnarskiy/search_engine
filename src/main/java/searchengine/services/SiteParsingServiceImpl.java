@@ -24,35 +24,29 @@ public class SiteParsingServiceImpl implements SiteParsingService {
 
     @Override
     @Transactional
-    public void parseSites(List<Site> siteUrls) {
+    public void parseSites(List<SiteEntity> siteUrls) {
         siteUrls.forEach(this::parseSite);
     }
 
     @Override
-    public void parseSite(Site site) {
-        SiteEntity siteEntity = new SiteEntity();
-        siteEntity.setUrl(site.getUrl());
-        siteEntity.setStatuses(Statuses.INDEXING);
-        siteEntity.setLocalDateTime(LocalDateTime.now());
-        siteEntity.setName(site.getName()); // Можно также вытянуть имя сайта, если нужно.
-
+    public void parseSite(SiteEntity siteEntity) {
         // Сохраняем сайт в БД перед началом парсинга
         siteRepository.save(siteEntity);
 
         try {
-            log.info("START PARSING ALL PAGES SITE " + site.getUrl() + " " + site.getName());
+            log.info("START PARSING ALL PAGES SITE " + siteEntity.getUrl() + " " + siteEntity.getName());
             // Парсим главную страницу сайта и последующие страницы рекурсивно
-            pageParsingService.parsePage(site.getUrl(), siteEntity);
+            pageParsingService.parsePage(siteEntity.getUrl(), siteEntity);
 
             // Обновляем статус сайта на "INDEXED"
-            siteEntity.setStatuses(Statuses.INDEXED);
+            //siteEntity.setStatuses(Statuses.INDEXED);
         } catch (Exception e) {
             // В случае ошибки устанавливаем статус "FAILED"
             siteEntity.setStatuses(Statuses.FAILED);
             siteEntity.setLastError(e.getMessage());
             e.printStackTrace();
         } finally {
-            log.info("FINELLY BLOCK " + site.getUrl());
+            log.info("FINELLY BLOCK " + siteEntity.getUrl());
             // Сохраняем обновленный статус и ошибку (если есть)
             siteRepository.save(siteEntity);
         }

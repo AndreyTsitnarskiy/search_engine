@@ -6,9 +6,14 @@ import org.springframework.stereotype.Service;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.dto.response.ApiResponse;
+import searchengine.entity.SiteEntity;
+import searchengine.entity.Statuses;
+import searchengine.repository.SiteRepository;
 import searchengine.services.interfaces.IndexingSitesService;
 import searchengine.utility.TransformString;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -18,6 +23,7 @@ public class IndexingSitesImpl implements IndexingSitesService {
     private volatile boolean isIndexingStart = false;
     private final SiteParsingServiceImpl siteParsingService;
     private final SitesList sitesList;
+    private final SiteRepository siteRepository;
 
     @Override
     public ResponseEntity<ApiResponse> startIndexing() {
@@ -63,13 +69,28 @@ public class IndexingSitesImpl implements IndexingSitesService {
     }
 
     private void indexingAllSites(){
-        List<Site> sites = sitesList.getSites();
+        List<SiteEntity> siteEntityList = getListSiteEntity();
         try {
-            siteParsingService.parseSites(sites);
+            siteParsingService.parseSites(siteEntityList);
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
             isIndexingStart = false;
         }
+    }
+
+    private List<SiteEntity> getListSiteEntity(){
+        List<Site> sites = sitesList.getSites();
+        List<SiteEntity> siteEntityList = new ArrayList<>();
+        for (Site site : sites){
+            SiteEntity siteEntity = new SiteEntity();
+            siteEntity.setName(site.getName());
+            siteEntity.setUrl(site.getUrl());
+            siteEntity.setLocalDateTime(LocalDateTime.now());
+            siteEntity.setStatuses(Statuses.INDEXING);
+            siteEntityList.add(siteEntity);
+            siteRepository.save(siteEntity);
+        }
+        return siteEntityList;
     }
 }

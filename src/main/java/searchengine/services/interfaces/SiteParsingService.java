@@ -1,14 +1,14 @@
 package searchengine.services.interfaces;
 
 import jakarta.transaction.Transactional;
-import searchengine.config.Site;
+import searchengine.entity.SiteEntity;
 
 import java.util.List;
 
 public interface SiteParsingService {
 
     @Transactional
-    void parseSites(List<Site> siteUrls);
+    void parseSites(List<SiteEntity> siteUrls);
 
-    void parseSite(Site site);
+    void parseSite(SiteEntity siteEntity);
 }
