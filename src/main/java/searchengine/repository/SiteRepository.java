@@ -6,4 +6,5 @@ import searchengine.entity.SiteEntity;
 
 @Repository
 public interface SiteRepository extends JpaRepository<SiteEntity, Long> {
+
 }

@@ -17,7 +17,7 @@ public class ConnectionUtils {
     public static Document getDocument(String url, String referrer, String userAgent){
         Document document = new Document(url);
         try {
-            document = Jsoup.connect(url).userAgent(userAgent).referrer(referrer).get();
+            document = Jsoup.connect(url).userAgent(userAgent).referrer(referrer).timeout(2000).get();
         } catch (Exception e) {
             log.info("ERROR CONNECTION UTILS method getDocument");
             e.printStackTrace();
@@ -39,4 +39,6 @@ public class ConnectionUtils {
         }
         return code;
     }
+
+
 }

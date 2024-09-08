@@ -1,7 +1,9 @@
 package searchengine.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
 
+@Data
 @Entity
 @Table(name = "index_table", schema = "sites_parsing")
 public class IndexEntity {

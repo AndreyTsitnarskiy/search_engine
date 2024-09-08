@@ -1,6 +1,7 @@
 package searchengine.services;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import searchengine.config.Site;
@@ -16,6 +17,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class IndexingSitesImpl implements IndexingSitesService {
@@ -24,6 +26,7 @@ public class IndexingSitesImpl implements IndexingSitesService {
     private final SiteParsingServiceImpl siteParsingService;
     private final SitesList sitesList;
     private final SiteRepository siteRepository;
+    private final PageParsingServiceImpl pageParsingService;
 
     @Override
     public ResponseEntity<ApiResponse> startIndexing() {
@@ -44,7 +47,9 @@ public class IndexingSitesImpl implements IndexingSitesService {
     public ResponseEntity<ApiResponse> stopIndexing() {
         ApiResponse apiResponse = new ApiResponse();
         if(isIndexingStart){
-            //Наполнить логикой остановки
+            log.info("Остановка процесса индексации...");
+            isIndexingStart = false;
+            pageParsingService.saveAllData();
             apiResponse.setResult(true);
         } else {
             apiResponse.setResult(false);
