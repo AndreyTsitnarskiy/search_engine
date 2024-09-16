@@ -3,17 +3,15 @@ package searchengine.services;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import searchengine.entity.IndexEntity;
-import searchengine.entity.LemmaEntity;
-import searchengine.entity.PageEntity;
-import searchengine.entity.SiteEntity;
+import searchengine.entity.*;
 import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
 import searchengine.repository.PageRepository;
+import searchengine.repository.SiteRepository;
 import searchengine.services.interfaces.PageParsingService;
 import searchengine.utility.ProjectParameters;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,6 +26,7 @@ public class PageParsingServiceImpl implements PageParsingService {
     private final ProjectParameters projectParameters;
     private final LemmaRepository lemmaRepository;
     private final IndexRepository indexRepository;
+    private final SiteRepository siteRepository;
 
     @Override
     public void parsePage(String pageUrl, SiteEntity siteEntity){
@@ -38,23 +37,31 @@ public class PageParsingServiceImpl implements PageParsingService {
             forkJoinPool.invoke(new PageTask(pageUrl, siteEntity, this, projectParameters));
             log.info("Все задачи завершены.");
             saveAllLemmas();
-            saveAllIndexes();
         } finally {
             forkJoinPool.shutdown();
             log.info("ForkJoinPool завершён.");
         }
     }
 
-    @Transactional
-    public void saveAllData() {
-        saveAllLemmas();
-        saveAllIndexes();
-    }
-
     public void savePageEntity(PageEntity pageEntity){
         pageRepository.save(pageEntity);
     }
 
+    //===================================UPDATE STATUS====================================================
+    public void updateSiteStatusFailed(SiteEntity siteEntity, Statuses status, String error) {
+        siteEntity.setStatuses(status);
+        siteEntity.setLocalDateTime(LocalDateTime.now());
+        siteEntity.setLastError(error);
+        siteRepository.save(siteEntity);
+    }
+
+    public void updateSiteStatusIndexing(SiteEntity siteEntity, Statuses status) {
+        siteEntity.setStatuses(status);
+        siteEntity.setLocalDateTime(LocalDateTime.now());
+        siteRepository.save(siteEntity);
+    }
+
+    //===================================SAVE ENTITY====================================================
     private void saveAllLemmas() {
         ConcurrentHashMap<SiteEntity, ConcurrentHashMap<String, LemmaEntity>> allLemmasBySiteIdCopy = new ConcurrentHashMap<>(PageTask.getAllLemmasBySiteId());
 
@@ -70,11 +77,7 @@ public class PageParsingServiceImpl implements PageParsingService {
         log.info("Все леммы сохранены.");
     }
 
-    private void saveAllIndexes(){
-        ConcurrentHashMap<PageEntity, Set<IndexEntity>> allIndexesByPage = new ConcurrentHashMap<>(PageTask.getAllIndexesByPage());
-        for (Map.Entry<PageEntity, Set<IndexEntity>> pageEntitySetEntry : allIndexesByPage.entrySet()) {
-            Set<IndexEntity> tempIndexEntry = pageEntitySetEntry.getValue();
-            indexRepository.saveAll(tempIndexEntry);
-        }
+    public void saveAllIndexes(Set<IndexEntity> setIndexes){
+        indexRepository.saveAll(setIndexes);
     }
 }
