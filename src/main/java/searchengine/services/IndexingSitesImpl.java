@@ -75,12 +75,14 @@ public class IndexingSitesImpl implements IndexingSitesService {
 
     private void indexingAllSites(){
         List<SiteEntity> siteEntityList = getListSiteEntity();
+        log.info("Начало индексации всех сайтов: " + LocalDateTime.now());
         try {
             siteParsingService.parseSites(siteEntityList);
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
             isIndexingStart = false;
+            log.info("Завершение индексации всех сайтов: " + LocalDateTime.now());
         }
     }
 

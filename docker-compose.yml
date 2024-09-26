@@ -1,0 +1,56 @@
+version: '3.8'
+services:
+#  db:
+#    image: postgres:13
+#    container_name: postgres-db
+#    environment:
+#      POSTGRES_DB: search_engine_db
+#      POSTGRES_USER: se_user
+#      POSTGRES_PASSWORD: testPass
+#    ports:
+#     - "5432:5432"
+#    volumes:
+#      - db_data:/var/lib/postgresql/data
+#      - ../schema.sql:/docker-entrypoint-initdb.d/schema.sql  # Путь к скрипту
+#    healthcheck:
+#      test: ["CMD", "pg_isready", "-U", "se_user", "-d", "search_engine_db"]
+#      interval: 5s
+#      timeout: 5s
+#      retries: 3
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    network_mode: "host"  # Использование сети хоста
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/search_engine_db
+      SPRING_DATASOURCE_USERNAME: se_user
+      SPRING_DATASOURCE_PASSWORD: app$diplomU$er
+    ports:
+      - "10100:10100"
+    volumes:
+      - ../application.yaml:/config/application.yml  # Mount external application.yml
+#    depends_on:
+#      db:
+#        condition: service_healthy  # Ждем, пока база данных не станет здоровой
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ../prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+
+volumes:
+  db_data: {}

@@ -34,4 +34,22 @@ public class LemmaEntity {
         this.lemma = lemma;
         this.frequency = frequency;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        LemmaEntity that = (LemmaEntity) o;
+
+        if (!lemma.equals(that.lemma)) return false;
+        return siteEntity.equals(that.siteEntity);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = siteEntity.hashCode();
+        result = 31 * result + lemma.hashCode();
+        return result;
+    }
 }

@@ -12,7 +12,7 @@ public class IndexEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
-    @ManyToOne
+    @ManyToOne//(cascade = CascadeType.PERSIST)
     @JoinColumn(name = "page_id", nullable = false)
     private PageEntity pageEntity;
 
