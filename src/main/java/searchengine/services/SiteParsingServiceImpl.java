@@ -64,5 +64,6 @@ public class SiteParsingServiceImpl implements SiteParsingService {
         uPsiteEntity.setStatuses(statuses);
         uPsiteEntity.setLastError(textError);
         siteRepository.save(uPsiteEntity);
+
     }
 }
