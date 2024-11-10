@@ -5,14 +5,12 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import searchengine.config.Site;
 import searchengine.entity.SiteEntity;
 import searchengine.entity.Statuses;
 import searchengine.repository.SiteRepository;
 import searchengine.services.interfaces.PageParsingService;
 import searchengine.services.interfaces.SiteParsingService;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -53,6 +51,8 @@ public class SiteParsingServiceImpl implements SiteParsingService {
         }
     }
 
+    //======================UPDATE TO DB===================
+    //обновляем статусы индексации сайта
     private void updateStatus(Statuses statuses, long idSiteEntity){
         SiteEntity uPsiteEntity = siteRepository.findById(idSiteEntity).orElseThrow(EntityNotFoundException::new);
         uPsiteEntity.setStatuses(statuses);

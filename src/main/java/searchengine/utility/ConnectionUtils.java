@@ -19,7 +19,7 @@ public class ConnectionUtils {
         try {
             document = Jsoup.connect(url).userAgent(userAgent).referrer(referrer).timeout(2000).get();
         } catch (Exception e) {
-            log.info("ERROR CONNECTION UTILS method getDocument");
+            log.info("ERROR CONNECTION UTILS method getDocument " + url);
             e.printStackTrace();
         }
         return document;

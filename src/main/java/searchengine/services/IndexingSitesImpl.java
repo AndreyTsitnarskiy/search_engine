@@ -49,7 +49,7 @@ public class IndexingSitesImpl implements IndexingSitesService {
         if(isIndexingStart){
             log.info("Остановка процесса индексации...");
             isIndexingStart = false;
-            pageParsingService.saveAllData();
+            //pageParsingService.saveAllData();
             apiResponse.setResult(true);
         } else {
             apiResponse.setResult(false);
