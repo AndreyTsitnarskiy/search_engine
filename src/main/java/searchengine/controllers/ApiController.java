@@ -1,17 +1,19 @@
 package searchengine.controllers;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import searchengine.dto.response.ApiResponse;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+import searchengine.dto.response.IndexingRequest;
+import searchengine.dto.response.IndexingResponse;
 import searchengine.dto.statistics.StatisticsResponse;
-import searchengine.services.interfaces.IndexingSitesService;
-import searchengine.services.interfaces.StatisticsService;
+import searchengine.services.indexing.IndexingSitesService;
+import searchengine.services.statisitc.StatisticsService;
 
 @RestController
 @RequestMapping("/api")
+@Validated
 public class ApiController {
 
     private final StatisticsService statisticsService;
@@ -28,17 +30,20 @@ public class ApiController {
     }
 
     @GetMapping("/startIndexing")
-    public ResponseEntity<ApiResponse> startIndexing(){
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public IndexingResponse startIndexing(){
         return indexingSitesService.startIndexing();
     }
 
     @GetMapping("/stopIndexing")
-    public ResponseEntity<ApiResponse> stopIndexing(){
+    @ResponseStatus(HttpStatus.OK)
+    public IndexingResponse stopIndexing(){
         return indexingSitesService.stopIndexing();
     }
 
-    @PostMapping("/")
-    public ResponseEntity<ApiResponse> singlePageIndexing(String page){
-        return indexingSitesService.singlePageIndexing(page);
+    @PostMapping(value = "/indexingPage", consumes =  {MediaType.APPLICATION_FORM_URLENCODED_VALUE})
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public IndexingResponse singlePageIndexing(@Validated IndexingRequest indexingRequest) {
+        return indexingSitesService.singlePageIndexing(indexingRequest);
     }
 }

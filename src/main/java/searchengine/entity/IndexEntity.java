@@ -1,25 +1,47 @@
 package searchengine.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 
-@Data
+import java.util.Objects;
+
+
+@Getter
+@Setter
+@ToString
+@Builder
+@AllArgsConstructor(access = AccessLevel.PACKAGE)
+@NoArgsConstructor
 @Entity
-@Table(name = "index_table", schema = "sites_parsing")
+@Table(name = "index", uniqueConstraints = @UniqueConstraint(columnNames = {"page_id", "lemma_id"}))
 public class IndexEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    private Integer id;
 
     @ManyToOne
     @JoinColumn(name = "page_id", nullable = false)
-    private PageEntity pageEntity;
+    private PageEntity page;
 
     @ManyToOne
     @JoinColumn(name = "lemma_id", nullable = false)
-    private LemmaEntity lemmaEntity;
+    private LemmaEntity lemma;
 
-    @Column(nullable = false)
-    private float rank;
+    @Column(nullable = false, name = "rank")
+    private Float rank;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        IndexEntity index = (IndexEntity) o;
+        return Objects.equals(page, index.page) && Objects.equals(lemma, index.lemma);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(page, lemma);
+    }
+
 }

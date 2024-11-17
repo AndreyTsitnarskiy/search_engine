@@ -5,14 +5,14 @@ import org.springframework.stereotype.Repository;
 import searchengine.entity.LemmaEntity;
 import searchengine.entity.SiteEntity;
 
-import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 @Repository
-public interface LemmaRepository extends JpaRepository<LemmaEntity, Long> {
+public interface LemmaRepository extends JpaRepository<LemmaEntity, Integer> {
 
-    LemmaEntity findByLemma(String lemma);
+    Optional<LemmaEntity> findBySiteAndLemma(SiteEntity siteEntity, String lemma);
 
-    List<LemmaEntity> findAllBySiteEntity(SiteEntity siteEntity);
+    Set<LemmaEntity> findAllBySite(SiteEntity siteEntity);
 
-    LemmaEntity findByLemmaAndSiteEntity(String lemma, SiteEntity siteEntity);
 }
