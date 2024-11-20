@@ -10,11 +10,10 @@ import java.util.Set;
 @Getter
 @Setter
 @ToString
-@Builder
-@AllArgsConstructor(access = AccessLevel.PACKAGE)
+@AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "lemma", uniqueConstraints = @UniqueConstraint(columnNames = {"site_id", "lemma"}))
+@Table(name = "lemmas", schema = "sites_parsing", uniqueConstraints = @UniqueConstraint(columnNames = {"site_id", "lemma"}))
 public class LemmaEntity {
 
     @Id
@@ -32,8 +31,6 @@ public class LemmaEntity {
     private Integer frequency;
 
     @OneToMany(mappedBy = "lemma", cascade = CascadeType.ALL)
-    @Builder.Default
-    @ToString.Exclude
     private Set<IndexEntity> indices = new HashSet<>();
 
     @Override

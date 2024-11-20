@@ -10,15 +10,14 @@ import java.util.Set;
 @Getter
 @Setter
 @ToString
-@Builder
-@AllArgsConstructor(access = AccessLevel.PACKAGE)
+@AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "page")
+@Table(name = "page", schema = "sites_parsing")
 public class PageEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private int id;
 
     @ManyToOne
     @JoinColumn(name = "site_id", nullable = false)
@@ -31,13 +30,17 @@ public class PageEntity {
     private Integer code;
 
     @Column(nullable = false, columnDefinition = "TEXT")
-    @ToString.Exclude
     private String content;
 
     @OneToMany(mappedBy = "page", cascade = CascadeType.ALL)
-    @Builder.Default
-    @ToString.Exclude
     private Set<IndexEntity> indices = new HashSet<>();
+
+    public PageEntity(SiteEntity site, String path, Integer code, String content) {
+        this.site = site;
+        this.path = path;
+        this.code = code;
+        this.content = content;
+    }
 
     @Override
     public boolean equals(Object o) {

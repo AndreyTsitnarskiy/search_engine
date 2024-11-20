@@ -9,18 +9,17 @@ import java.util.*;
 @Getter
 @Setter
 @ToString
-@Builder
 @NoArgsConstructor
-@AllArgsConstructor(access = AccessLevel.PACKAGE)
+@AllArgsConstructor
 @Entity
-@Table(name = "site")
+@Table(name = "site", schema = "sites_parsing")
 public class SiteEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private int id;
 
     @Enumerated(EnumType.STRING)
-    private Statuses status;
+    private Status status;
 
     @Column(nullable = false)
     private LocalDateTime statusTime;
@@ -35,13 +34,9 @@ public class SiteEntity {
     private String name;
 
     @OneToMany(mappedBy = "site", cascade = CascadeType.ALL)
-    @Builder.Default
-    @ToString.Exclude
     private Set<PageEntity> pages = new HashSet<>();
 
     @OneToMany(mappedBy = "site", cascade = CascadeType.ALL)
-    @Builder.Default
-    @ToString.Exclude
     private Set<LemmaEntity> lemmas = new HashSet<>();
 
     @Override

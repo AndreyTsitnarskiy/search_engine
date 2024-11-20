@@ -1,11 +1,10 @@
 package searchengine.services.indexing;
 
-import searchengine.dto.response.IndexingRequest;
-import searchengine.dto.response.IndexingResponse;
+import org.springframework.http.ResponseEntity;
+import searchengine.dto.response.ApiResponse;
 
 public interface IndexingSitesService {
-
-    IndexingResponse startIndexing();
-    IndexingResponse stopIndexing();
-    IndexingResponse singlePageIndexing(IndexingRequest page);
+    ResponseEntity<ApiResponse> startIndexing();
+    ResponseEntity<ApiResponse> indexPage(String page);
+    ResponseEntity<ApiResponse> stopIndexing();
 }

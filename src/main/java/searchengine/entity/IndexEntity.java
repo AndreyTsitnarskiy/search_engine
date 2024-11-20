@@ -3,45 +3,29 @@ package searchengine.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.Objects;
-
-
-@Getter
-@Setter
-@ToString
-@Builder
-@AllArgsConstructor(access = AccessLevel.PACKAGE)
+@Data
 @NoArgsConstructor
+@RequiredArgsConstructor
 @Entity
-@Table(name = "index", uniqueConstraints = @UniqueConstraint(columnNames = {"page_id", "lemma_id"}))
+@Table(name = "indexes_table", schema = "sites_parsing", uniqueConstraints = @UniqueConstraint(columnNames = {"page_id", "lemma_id"}))
 public class IndexEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private int id;
 
+    @NonNull
     @ManyToOne
     @JoinColumn(name = "page_id", nullable = false)
     private PageEntity page;
 
+    @NonNull
     @ManyToOne
     @JoinColumn(name = "lemma_id", nullable = false)
     private LemmaEntity lemma;
 
+    @NonNull
     @Column(nullable = false, name = "rank")
-    private Float rank;
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        IndexEntity index = (IndexEntity) o;
-        return Objects.equals(page, index.page) && Objects.equals(lemma, index.lemma);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(page, lemma);
-    }
+    private float rank;
 
 }

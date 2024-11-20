@@ -1,21 +1,22 @@
 package searchengine.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import searchengine.entity.SiteEntity;
-import searchengine.entity.Statuses;
-
+import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 @Repository
 public interface SiteRepository extends JpaRepository<SiteEntity, Integer> {
 
-    boolean existsByStatus(Statuses status);
+    Optional<List<SiteEntity>> findByName(String name);
 
-    Set<SiteEntity> findAllByStatus(Statuses statuses);
+    @Transactional
+    void deleteSiteEntityByUrl(String url);
 
-    Optional<SiteEntity> findByUrl(String url);
-
-    boolean existsByIdAndStatus(Integer siteId, Statuses statuses);
+    @Query(value = "SELECT * FROM sites_parsing.site WHERE url = :url", nativeQuery = true)
+    SiteEntity findSiteEntityByUrl(@Param("url") String url);
 }
