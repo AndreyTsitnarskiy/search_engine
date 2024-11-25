@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Connection;
 import org.jsoup.nodes.Document;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,7 +61,7 @@ public class IndexingSitesImpl implements IndexingSitesService {
     @Override
     public ResponseEntity<ApiResponse> startIndexing() {
         ApiResponse apiResponse = new ApiResponse();
-        deleteAllDataFromDatabase();
+        //deleteAllDataFromDatabase();
         if (isIndexing) {
             apiResponse.setResult(false);
             apiResponse.setMessageError("Indexing already started");
@@ -189,13 +190,18 @@ public class IndexingSitesImpl implements IndexingSitesService {
 
     private void indexSingleSite(Site site) {
         try {
+            log.info("Indexing started for site: {}", site.getName());
+            long startTime = System.currentTimeMillis();
+
             CrawlerTask pageParse = initCollectionsForSiteAndCreateMainPageSiteParser(site);
             forkJoinPool.invoke(pageParse);
-            fillLemmasAndIndexTable(site);
+            processSiteData(site);
             markSiteAsIndexed(site);
-            log.info("Indexing completed for " + site.getName());
+
+            long endTime = System.currentTimeMillis();
+            log.info("Indexing completed for site: {}. Time taken: {} ms", site.getName(), (endTime - startTime));
         } catch (Exception exception) {
-            log.warn("Indexing FAILED " + site.getName() + " due to " + exception);
+            log.warn("Indexing FAILED for site: {} due to {}", site.getName(), exception.getMessage());
             fixSiteIndexingError(site, exception);
             clearLemmasAndIndexTable(site);
         } finally {
@@ -252,27 +258,46 @@ public class IndexingSitesImpl implements IndexingSitesService {
         }
     }
 
-    private void fillLemmasAndIndexTable(Site site) {
-        String url = ReworkString.getStartPage(site.getUrl());
-        int siteEntityId = siteRepository.findSiteEntityByUrl(url).getId();
-        Map<String, LemmaEntity> lemmaEntityMap = lemmasMap.get(siteEntityId);
-        Set<IndexEntity> indexEntitySet = indexMap.get(siteEntityId);
-        lemmaRepository.saveAll(lemmaEntityMap.values());
-        lemmasMap.get(siteEntityId).clear();
-        indexRepository.saveAll(indexEntitySet);
-        indexMap.get(siteEntityId).clear();
-    }
+    //======================SAVE DATA========================
 
+    @Transactional
     private void saveDataFromMapsToDatabase() {
         try {
             lock.lock();
             for (Site site : sites.getSites()) {
-                fillLemmasAndIndexTable(site);
+                processSiteData(site);
             }
         } catch (Exception exception) {
             log.warn("Data saving FAILED due to " + exception);
         } finally {
             lock.unlock();
+        }
+    }
+
+    private void processSiteData(Site site) {
+        String url = ReworkString.getStartPage(site.getUrl());
+        int siteEntityId = siteRepository.findSiteEntityByUrl(url).getId();
+        Map<String, LemmaEntity> lemmaEntityMap = lemmasMap.get(siteEntityId);
+        Set<IndexEntity> indexEntitySet = indexMap.get(siteEntityId);
+
+        saveBatch(lemmaEntityMap.values(), lemmaRepository, 500);
+        lemmasMap.get(siteEntityId).clear();
+
+        saveBatch(indexEntitySet, indexRepository, 500);
+        indexMap.get(siteEntityId).clear();
+    }
+
+    private <T> void saveBatch(Collection<T> entities, JpaRepository<T, ?> repository, int batchSize) {
+        List<T> batch = new ArrayList<>();
+        for (T entity : entities) {
+            batch.add(entity);
+            if (batch.size() == batchSize) {
+                repository.saveAll(batch);
+                batch.clear();
+            }
+        }
+        if (!batch.isEmpty()) {
+            repository.saveAll(batch);
         }
     }
 
@@ -382,7 +407,9 @@ public class IndexingSitesImpl implements IndexingSitesService {
     private void shutdown() {
         forkJoinPool.shutdownNow();
         try {
-            forkJoinPool.awaitTermination(10, TimeUnit.SECONDS);
+            if (!forkJoinPool.awaitTermination(10, TimeUnit.SECONDS)) {
+                log.warn("ForkJoinPool did not terminate properly");
+            }
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
