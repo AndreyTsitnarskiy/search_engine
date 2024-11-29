@@ -22,6 +22,9 @@ public interface LemmaRepository extends JpaRepository<LemmaEntity, Integer> {
             nativeQuery = true)
     void reduceByOneLemmaFrequencies(@Param("siteId") int siteId, @Param("lemmas") Collection<String> lemmas);
 
+    @Query("SELECT l FROM LemmaEntity l WHERE l.site.id = :siteId AND l.lemma IN :lemmas")
+    List<LemmaEntity> findBySiteIdAndLemmaIn(@Param("siteId") Integer siteId, @Param("lemmas") Set<String> lemmas);
+
     int countLemmasEntitiesBySite(SiteEntity siteEntity);
 
     @Modifying

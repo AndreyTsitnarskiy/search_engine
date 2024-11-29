@@ -37,8 +37,8 @@ public class LemmaEntity {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        LemmaEntity lemma1 = (LemmaEntity) o;
-        return Objects.equals(site, lemma1.site) && Objects.equals(lemma, lemma1.lemma);
+        LemmaEntity that = (LemmaEntity) o;
+        return Objects.equals(site, that.site) && Objects.equals(lemma, that.lemma);
     }
 
     @Override

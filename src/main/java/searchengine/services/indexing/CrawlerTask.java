@@ -61,13 +61,16 @@ public class CrawlerTask extends RecursiveAction {
         String html = "";
         PageEntity pageEntity = new PageEntity(siteEntity, pathToSave, httpStatusCode, html);
         if (httpStatusCode != 200) {
-            indexingSites.savePageAndSiteStatusTime(pageEntity, html, siteEntity);
+            indexingSites.savePageAndSiteStatusTime(pageEntity, siteEntity);
         } else {
             Document document = connection.get();
             html = document.outerHtml();
-            indexingSites.savePageAndSiteStatusTime(pageEntity, html, siteEntity);
+            pageEntity.setContent(html);
+
+            indexingSites.savePageAndSiteStatusTime(pageEntity, siteEntity);
             log.info("Page indexed: " + pathToSave);
-            indexingSites.extractLemmas(html, pageEntity, siteEntity);
+
+            indexingSites.extractLemmas(pageEntity, siteEntity);
             Elements anchors = document.select("body").select("a");
             handleAnchors(anchors, pagesList);
         }

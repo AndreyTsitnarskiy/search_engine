@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Connection;
 import org.jsoup.nodes.Document;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -138,15 +137,15 @@ public class IndexingSitesImpl implements IndexingSitesService {
         String html = "";
         PageEntity pageEntity = new PageEntity(siteEntity, pathToSave, httpStatusCode, html);
         if (httpStatusCode != 200) {
-            savePageAndSiteStatusTime(pageEntity, html, siteEntity);
+            savePageAndSiteStatusTime(pageEntity, siteEntity);
         } else {
             html = document.outerHtml();
             if (deletePageEntity != null) {
                 reduceLemmaFrequenciesByOnePage(html, siteEntity.getId());
             }
-            savePageAndSiteStatusTime(pageEntity, html, siteEntity);
+            savePageAndSiteStatusTime(pageEntity, siteEntity);
             log.info("Page indexed: " + pathToSave);
-            extractLemmas(html, pageEntity, siteEntity);
+            extractLemmas(pageEntity, siteEntity);
         }
         fixSiteStatusAfterSinglePageIndexed(siteEntity);
     }
@@ -195,9 +194,9 @@ public class IndexingSitesImpl implements IndexingSitesService {
 
             CrawlerTask pageParse = initCollectionsForSiteAndCreateMainPageSiteParser(site);
             forkJoinPool.invoke(pageParse);
-            processSiteData(site);
+            int siteId = getSiteId(site);
+            processLemmaSaveBatchData(siteId);
             markSiteAsIndexed(site);
-
             long endTime = System.currentTimeMillis();
             log.info("Indexing completed for site: {}. Time taken: {} ms", site.getName(), (endTime - startTime));
         } catch (Exception exception) {
@@ -207,21 +206,6 @@ public class IndexingSitesImpl implements IndexingSitesService {
         } finally {
             markIndexingCompletionIfApplicable();
         }
-    }
-
-    public void savePageAndSiteStatusTime(PageEntity pageEntity, String pageHtml, SiteEntity siteEntity) {
-        if (!forkJoinPool.isTerminating()
-                && !forkJoinPool.isTerminated()
-                && !siteStatusMap.get(siteEntity.getUrl()).equals(Status.FAILED)) {
-            savePageAndSite(pageEntity, pageHtml, siteEntity);
-        }
-    }
-
-    public void savePageAndSite(PageEntity pageEntity, String pageHtml, SiteEntity siteEntity) {
-        pageEntity.setContent(pageHtml);
-        pageRepository.save(pageEntity);
-        siteEntity.setStatusTime(LocalDateTime.now());
-        siteRepository.save(siteEntity);
     }
 
     private Map<String, Integer> getAllLemmasPage(String html) {
@@ -236,11 +220,17 @@ public class IndexingSitesImpl implements IndexingSitesService {
                 .collect(Collectors.groupingBy(Map.Entry::getKey, Collectors.summingInt(Map.Entry::getValue)));
     }
 
-    public void extractLemmas(String html, PageEntity pageEntity, SiteEntity siteEntity) {
-        Map<String, Integer> lemmaEntityHashMap = getAllLemmasPage(html);
+    public void extractLemmas(PageEntity pageEntity, SiteEntity siteEntity) {
+        Map<String, Integer> lemmaEntityHashMap = getAllLemmasPage(pageEntity.getContent());
+
+        if(checkCountSizeBatch()){
+            saveDataFromMapsToDatabase();
+        }
+
         for (String lemmas : lemmaEntityHashMap.keySet()) {
             Map<String, LemmaEntity> allLemmasBySiteId = lemmasMap.get(siteEntity.getId());
             LemmaEntity lemmaEntity = allLemmasBySiteId.get(lemmas);
+
             if (lemmaEntity == null) {
                 lemmaEntity = new LemmaEntity();
                 lemmaEntity.setLemma(lemmas);
@@ -258,14 +248,27 @@ public class IndexingSitesImpl implements IndexingSitesService {
         }
     }
 
-    //======================SAVE DATA========================
+    public void savePageAndSiteStatusTime(PageEntity pageEntity, SiteEntity siteEntity) {
+        if (!forkJoinPool.isTerminating()
+                && !forkJoinPool.isTerminated()
+                && !siteStatusMap.get(siteEntity.getUrl()).equals(Status.FAILED)) {
+            savePageAndSite(pageEntity, siteEntity);
+        }
+    }
+
+    public void savePageAndSite(PageEntity pageEntity, SiteEntity siteEntity) {
+        pageRepository.save(pageEntity);
+        siteEntity.setStatusTime(LocalDateTime.now());
+        siteRepository.save(siteEntity);
+    }
 
     @Transactional
     private void saveDataFromMapsToDatabase() {
         try {
             lock.lock();
             for (Site site : sites.getSites()) {
-                processSiteData(site);
+                int siteId = getSiteId(site);
+                processLemmaSaveBatchData(siteId);
             }
         } catch (Exception exception) {
             log.warn("Data saving FAILED due to " + exception);
@@ -274,31 +277,43 @@ public class IndexingSitesImpl implements IndexingSitesService {
         }
     }
 
-    private void processSiteData(Site site) {
-        String url = ReworkString.getStartPage(site.getUrl());
-        int siteEntityId = siteRepository.findSiteEntityByUrl(url).getId();
-        Map<String, LemmaEntity> lemmaEntityMap = lemmasMap.get(siteEntityId);
-        Set<IndexEntity> indexEntitySet = indexMap.get(siteEntityId);
-
-        saveBatch(lemmaEntityMap.values(), lemmaRepository, 500);
-        lemmasMap.get(siteEntityId).clear();
-
-        saveBatch(indexEntitySet, indexRepository, 500);
-        indexMap.get(siteEntityId).clear();
+    private boolean checkCountSizeBatch(){
+        return lemmasMap.values().stream().mapToInt(Map::size).sum() > 2000;
     }
 
-    private <T> void saveBatch(Collection<T> entities, JpaRepository<T, ?> repository, int batchSize) {
-        List<T> batch = new ArrayList<>();
-        for (T entity : entities) {
-            batch.add(entity);
-            if (batch.size() == batchSize) {
-                repository.saveAll(batch);
-                batch.clear();
+    private int getSiteId(Site site){
+        String url = ReworkString.getStartPage(site.getUrl());
+        return siteRepository.findSiteEntityByUrl(url).getId();
+    }
+
+    private void processLemmaSaveBatchData(int siteId) {
+        Map<String, LemmaEntity> lemmaEntityMap = lemmasMap.get(siteId);
+        if (lemmaEntityMap == null || lemmaEntityMap.isEmpty()) {
+            return;
+        }
+        Set<String> lemmas = lemmaEntityMap.keySet();
+        List<LemmaEntity> inRepositoryLemma = lemmaRepository.findBySiteIdAndLemmaIn(siteId, lemmas);
+        List<LemmaEntity> lemmasToSave = new ArrayList<>();
+
+        for (LemmaEntity existingLemma : inRepositoryLemma) {
+            LemmaEntity newLemma = lemmaEntityMap.get(existingLemma.getLemma());
+            if (newLemma != null) {
+                existingLemma.setFrequency(existingLemma.getFrequency() + newLemma.getFrequency());
+                lemmasToSave.add(existingLemma);
+                lemmaEntityMap.remove(existingLemma.getLemma());
             }
         }
-        if (!batch.isEmpty()) {
-            repository.saveAll(batch);
-        }
+
+        lemmasToSave.addAll(lemmaEntityMap.values());
+        lemmaRepository.saveAll(lemmasToSave);
+        processIndexesSaveBatchData(siteId);
+        lemmasMap.get(siteId).clear();
+    }
+
+    private void processIndexesSaveBatchData(int siteId) {
+        Set<IndexEntity> indexEntitySet = indexMap.get(siteId);
+        indexRepository.saveAll(indexEntitySet);
+        indexMap.get(siteId).clear();
     }
 
     private void clearLemmasAndIndexTable(Site site) {
@@ -394,14 +409,6 @@ public class IndexingSitesImpl implements IndexingSitesService {
     private void fixSiteStatusAfterSinglePageIndexed(SiteEntity site) {
         site.setStatus(Status.INDEXED);
         siteRepository.save(site);
-    }
-
-    @Transactional
-    private void deleteAllDataFromDatabase() {
-        lemmaRepository.deleteAll();
-        pageRepository.deleteAll();
-        indexRepository.deleteAll();
-        siteRepository.deleteAll();
     }
 
     private void shutdown() {

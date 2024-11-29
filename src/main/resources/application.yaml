@@ -3,10 +3,10 @@ indexing-settings:
   sites:
     - url: https://www.playback.ru
       name: PlayBack.Ru
-    - url: https://charutti.ru
-      name: Бренд ЧАРУТТИ
-    - url: https://opt-opt-opt.ru
-      name: ТриОпт
+#    - url: https://charutti.ru
+#      name: Бренд ЧАРУТТИ
+#    - url: https://opt-opt-opt.ru
+#      name: ТриОпт
     - url: https://dombulgakova.ru
       name: PДом Булгакова
     - url: https://www.svetlovka.ru
@@ -22,8 +22,8 @@ spring:
   datasource:
     #url: jdbc:postgresql://host.docker.internal:5432/search_engine_db
     url: jdbc:postgresql://localhost:5432/search_engine_db
-    username: se_user
-    password: app$diplomU$er
+    username: "${DB_USER}"
+    password: "${DB_PASS}"
     #password: testPass
     driver-class-name: org.postgresql.Driver
     hikari:
@@ -37,7 +37,7 @@ spring:
     database: postgresql
     show-sql: false
     hibernate:
-      ddl-auto: update
+      ddl-auto: create-drop
       dialect: org.hibernate.dialect.PostgreSQLDialect
       naming:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
