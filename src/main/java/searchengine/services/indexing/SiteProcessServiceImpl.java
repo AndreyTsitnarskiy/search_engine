@@ -2,6 +2,7 @@ package searchengine.services.indexing;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.nodes.Document;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.entity.SiteEntity;
@@ -20,22 +21,15 @@ public class SiteProcessServiceImpl implements SIteProcessService {
     private final SiteRepository siteRepository;
     private final PageProcessService pageProcessService;
 
-    @Override
     @Transactional
     public void parseSites(List<SiteEntity> siteUrls) {
-        siteUrls.forEach(site -> {
-            CompletableFuture.runAsync(() -> parseSite(site)); // запуск в отдельном потоке
-        });
+        siteUrls.forEach(site -> CompletableFuture.runAsync(() -> parseSite(site)));
     }
 
-    @Override
+    @Transactional
     public void parseSite(SiteEntity siteEntity) {
         siteRepository.save(siteEntity);
-        try {
-            log.info("START PARSING ALL PAGES SITE " + siteEntity.getUrl() + " " + siteEntity.getName());
-            pageProcessService.parsePage(siteEntity.getUrl(), siteEntity);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        log.info("START PARSING: " + siteEntity.getUrl());
+        pageProcessService.parsePage(siteEntity.getUrl(), new Document(siteEntity.getUrl()), siteEntity);
     }
 }

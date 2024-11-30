@@ -29,7 +29,6 @@ public class IndexingSitesImpl implements IndexingSitesService {
 
     @Override
     public ResponseEntity<ApiResponse> startIndexing() {
-        saveAllSiteEntity();
         if(isIndexingStart){
             return ResponseEntity.ok(new ApiResponse(false, "Индексация не запущена"));
         } else {
@@ -53,7 +52,7 @@ public class IndexingSitesImpl implements IndexingSitesService {
     }
 
     private void indexingAllSites(){
-        List<SiteEntity> siteEntityList = siteRepository.findAll();
+        List<SiteEntity> siteEntityList = getListSiteEntity();
         try {
             sIteProcessService.parseSites(siteEntityList);
         } catch (Exception e) {
@@ -63,14 +62,18 @@ public class IndexingSitesImpl implements IndexingSitesService {
         }
     }
 
-    private void saveAllSiteEntity(){
-        for (Site sites : sitesList.getSites()){
+    private List<SiteEntity> getListSiteEntity(){
+        List<Site> sites = sitesList.getSites();
+        List<SiteEntity> siteEntityList = new ArrayList<>();
+        for (Site site : sites){
             SiteEntity siteEntity = new SiteEntity();
+            siteEntity.setName(site.getName());
+            siteEntity.setUrl(site.getUrl());
             siteEntity.setStatusTime(LocalDateTime.now());
-            siteEntity.setName(sites.getName());
             siteEntity.setStatus(Status.INDEXING);
-            siteEntity.setUrl(sites.getUrl());
+            siteEntityList.add(siteEntity);
             siteRepository.save(siteEntity);
         }
+        return siteEntityList;
     }
 }

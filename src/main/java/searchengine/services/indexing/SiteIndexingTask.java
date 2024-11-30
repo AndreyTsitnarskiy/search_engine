@@ -2,18 +2,18 @@ package searchengine.services.indexing;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Connection;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import searchengine.entity.PageEntity;
 import searchengine.entity.SiteEntity;
 import searchengine.utility.ConnectionUtil;
 import searchengine.utility.PropertiesProject;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RecursiveAction;
+import java.util.regex.Pattern;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -23,50 +23,36 @@ public class SiteIndexingTask extends RecursiveAction {
     private final PropertiesProject property;
     private final PageProcessServiceImpl pageProcessService;
 
-    private static final Set<String> visitedUrls = ConcurrentHashMap.newKeySet();
+    private static final Pattern FILE_EXTENSION_PATTERN = Pattern.compile(".*\\.(pdf|docx?|xlsx?|jpg|jpeg|gif|png|mp3|mp4|aac|json|csv|exe|apk|rar|zip|xml|jar|bin|svg|nc|webp|m|fig|eps)$", Pattern.CASE_INSENSITIVE);
 
     @Override
     protected void compute() {
-        if (!visitedUrls.add(url)) {
-            return;
-        }
-        if (property.getFileExtensions().matches(url)){
+        if (FILE_EXTENSION_PATTERN.matcher(url).matches()) {
+            log.info("Skipping file URL: {}", url);
             return;
         }
 
-        Set<SiteIndexingTask> siteIndexingTasks = new HashSet<>();
-        PageEntity pageEntity = new PageEntity();
-        pageEntity.setPath(url);
-        pageEntity.setSite(siteEntity);
-
+        Set<SiteIndexingTask> subTasks = new HashSet<>();
         try {
             log.info("START: " + url);
-            Document doc = ConnectionUtil.getDocument(url,
-                    property.getReferrer(),
-                    property.getUserAgent());
-
-            pageEntity.setContent(doc.html());
-            pageEntity.setCode(200);
+            Connection connection = ConnectionUtil.getConnection(url, property.getReferrer(), property.getUserAgent());
+            Document doc = connection.get();
 
             Elements links = doc.select("a[href]");
             for (Element link : links) {
-                String url = link.absUrl("href");
-
-                if (url.startsWith(siteEntity.getUrl()) && !visitedUrls.contains(url)) {
-                    SiteIndexingTask subTask = new SiteIndexingTask(url, siteEntity, property, pageProcessService);
-                    siteIndexingTasks.add(subTask);
+                String subUrl = link.absUrl("href");
+                if (subUrl.startsWith(siteEntity.getUrl()) && !pageProcessService.isUrlVisited(subUrl)) {
+                    //log.info("Processing URL: {}", url);
+                    String uri = url.substring(siteEntity.getUrl().length());
+                    pageProcessService.processPage(uri, doc, siteEntity);
+                    SiteIndexingTask subTask = new SiteIndexingTask(subUrl, siteEntity, property, pageProcessService);
+                    subTasks.add(subTask);
                     subTask.fork();
                 }
             }
         } catch (Exception e) {
-            log.error("ERROR ");
-            e.printStackTrace();
+            log.error("ERROR processing URL: " + url, e);
         }
-
-        pageProcessService.savePageEntity(pageEntity);
-
-        for (SiteIndexingTask sub : siteIndexingTasks) {
-            sub.join();
-        }
+        subTasks.forEach(SiteIndexingTask::join);
     }
 }

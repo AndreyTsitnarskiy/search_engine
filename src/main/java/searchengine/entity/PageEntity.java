@@ -15,7 +15,7 @@ public class PageEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
-    @ManyToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
     @JoinColumn(name = "site_id", nullable = false)
     private SiteEntity site;
 
@@ -26,7 +26,7 @@ public class PageEntity {
     private int code;
 
     @Lob
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
     public PageEntity(SiteEntity site, String path, int code, String content) {

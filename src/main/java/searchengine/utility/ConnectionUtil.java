@@ -16,15 +16,13 @@ import java.net.URL;
 @UtilityClass
 public class ConnectionUtil {
 
-    public static Document getDocument(String url, String referrer, String userAgent){
-        Document document = new Document(url);
-        try {
-            document = Jsoup.connect(url).userAgent(userAgent).referrer(referrer).timeout(2000).get();
-        } catch (Exception e) {
-            log.info("ERROR CONNECTION UTILS method getDocument");
-            e.printStackTrace();
-        }
-        return document;
+    public static Connection getConnection(String pagePath, String userAgent, String referrer) {
+        return Jsoup.connect(pagePath)
+                .userAgent(userAgent)
+                .referrer(referrer)
+                .timeout(10000)
+                .followRedirects(true)
+                .ignoreHttpErrors(true);
     }
 
     public static int getStatusCode(String url) {
