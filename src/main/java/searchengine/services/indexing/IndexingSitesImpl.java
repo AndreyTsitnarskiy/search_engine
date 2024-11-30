@@ -11,6 +11,7 @@ import searchengine.entity.SiteEntity;
 import searchengine.entity.Status;
 import searchengine.repository.PageRepository;
 import searchengine.repository.SiteRepository;
+import searchengine.utility.PropertiesProject;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -20,17 +21,25 @@ import java.util.concurrent.*;
 @Service
 @RequiredArgsConstructor
 public class IndexingSitesImpl implements IndexingSitesService {
+    private volatile boolean isIndexingStart = false;
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
     private final SitesList sitesList;
+    private final PropertiesProject property;
     private final ForkJoinPool forkJoinPool = new ForkJoinPool();
 
     @Override
     public ResponseEntity<ApiResponse> startIndexing() {
         List<SiteEntity> sites = saveAndGetAllSiteEntity();
+        if(isIndexingStart){
+            return ResponseEntity.ok(new ApiResponse(false, "Индексация не запущена"));
+        } else {
+            isIndexingStart = true;
+            new Thread(this::)
+        }
         sites.forEach(site -> {
             Set<String> visitedUrls = ConcurrentHashMap.newKeySet();
-            forkJoinPool.execute(new SiteIndexingTask(site.getUrl(), site, visitedUrls, siteRepository, pageRepository));
+            forkJoinPool.invoke(new SiteIndexingTask(site.getUrl(), site, visitedUrls, siteRepository, pageRepository, property));
         });
         return ResponseEntity.ok(new ApiResponse(true, "Indexing started"));
     }
@@ -47,6 +56,16 @@ public class IndexingSitesImpl implements IndexingSitesService {
         forkJoinPool.shutdownNow();
         siteRepository.updateAllFailed("Индексация остановлена пользователем");
         return ResponseEntity.ok(new ApiResponse(true, "Indexing stopped"));
+    }
+
+    private void indexingAllSites(){
+        List<SiteEntity> siteEntityList = getListSiteEntity();
+        try {
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            isIndexingStart = false;
+        }
     }
 
     private List<SiteEntity> saveAndGetAllSiteEntity(){

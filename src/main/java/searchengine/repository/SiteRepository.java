@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.entity.SiteEntity;
+import searchengine.entity.Status;
 
 @Repository
 public interface SiteRepository extends JpaRepository<SiteEntity, Integer> {
@@ -14,7 +15,7 @@ public interface SiteRepository extends JpaRepository<SiteEntity, Integer> {
     @Modifying
     @Transactional
     @Query("UPDATE SiteEntity s SET s.status = :status, s.lastError = :error, s.statusTime = CURRENT_TIMESTAMP WHERE s.id = :siteId")
-    void updateStatus(@Param("siteId") int siteId, @Param("status") String status, @Param("error") String error);
+    void updateStatus(@Param("siteId") int siteId, @Param("status") Status status, @Param("error") String error);
 
     @Modifying
     @Transactional

@@ -5,12 +5,13 @@ import lombok.extern.log4j.Log4j2;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.springframework.stereotype.Service;
 import searchengine.exceptions.SiteExceptions;
 
 import java.io.IOException;
 
 @Log4j2
-@UtilityClass
+@Service
 public class ConnectionUtil {
 
     public static Connection getConnection(String pagePath, String userAgent, String referrer) {
