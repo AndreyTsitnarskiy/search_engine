@@ -1,22 +1,23 @@
 package searchengine.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.entity.SiteEntity;
-import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface SiteRepository extends JpaRepository<SiteEntity, Integer> {
 
-    Optional<List<SiteEntity>> findByName(String name);
-
+    @Modifying
     @Transactional
-    void deleteSiteEntityByUrl(String url);
+    @Query("UPDATE SiteEntity s SET s.status = :status, s.lastError = :error, s.statusTime = CURRENT_TIMESTAMP WHERE s.id = :siteId")
+    void updateStatus(@Param("siteId") int siteId, @Param("status") String status, @Param("error") String error);
 
-    @Query(value = "SELECT * FROM sites_parsing.site WHERE url = :url", nativeQuery = true)
-    SiteEntity findSiteEntityByUrl(@Param("url") String url);
+    @Modifying
+    @Transactional
+    @Query("UPDATE SiteEntity s SET s.status = 'FAILED', s.lastError = :error, s.statusTime = CURRENT_TIMESTAMP WHERE s.status = 'INDEXING'")
+    void updateAllFailed(@Param("error") String error);
 }

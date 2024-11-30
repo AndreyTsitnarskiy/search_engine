@@ -19,36 +19,21 @@ public class SiteEntity {
     private int id;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private Status status;
 
-    @Column(nullable = false)
+    @Column(name = "status_time", nullable = false)
     private LocalDateTime statusTime;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "last_error", columnDefinition = "TEXT")
     private String lastError;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, length = 255)
     private String url;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 255)
     private String name;
 
-    @OneToMany(mappedBy = "site", cascade = CascadeType.ALL)
-    private Set<PageEntity> pages = new HashSet<>();
-
-    @OneToMany(mappedBy = "site", cascade = CascadeType.ALL)
-    private Set<LemmaEntity> lemmas = new HashSet<>();
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        SiteEntity site = (SiteEntity) o;
-        return Objects.equals(url, site.url);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(url);
-    }
+    @OneToMany(mappedBy = "site", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PageEntity> pages = new ArrayList<>();
 }

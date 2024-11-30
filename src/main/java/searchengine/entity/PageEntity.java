@@ -3,10 +3,6 @@ package searchengine.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
-
 @Getter
 @Setter
 @ToString
@@ -19,7 +15,7 @@ public class PageEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JoinColumn(name = "site_id", nullable = false)
     private SiteEntity site;
 
@@ -27,31 +23,16 @@ public class PageEntity {
     private String path;
 
     @Column(nullable = false)
-    private Integer code;
+    private int code;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Lob
+    @Column(nullable = false)
     private String content;
 
-    @OneToMany(mappedBy = "page", cascade = CascadeType.ALL)
-    private Set<IndexEntity> indices = new HashSet<>();
-
-    public PageEntity(SiteEntity site, String path, Integer code, String content) {
+    public PageEntity(SiteEntity site, String path, int code, String content) {
         this.site = site;
         this.path = path;
         this.code = code;
         this.content = content;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        PageEntity page = (PageEntity) o;
-        return Objects.equals(site, page.site) && Objects.equals(path, page.path);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(site, path);
     }
 }
