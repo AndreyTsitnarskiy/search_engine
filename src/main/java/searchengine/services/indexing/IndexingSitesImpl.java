@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.dto.response.ApiResponse;
@@ -35,12 +36,11 @@ public class IndexingSitesImpl implements IndexingSitesService {
             return ResponseEntity.ok(new ApiResponse(false, "Индексация не запущена"));
         } else {
             isIndexingStart = true;
-            new Thread(this::)
+            sites.forEach(site -> {
+                Set<String> visitedUrls = ConcurrentHashMap.newKeySet();
+                forkJoinPool.invoke(new SiteIndexingTask(site.getUrl(), site, visitedUrls, siteRepository, pageRepository, property));
+            });
         }
-        sites.forEach(site -> {
-            Set<String> visitedUrls = ConcurrentHashMap.newKeySet();
-            forkJoinPool.invoke(new SiteIndexingTask(site.getUrl(), site, visitedUrls, siteRepository, pageRepository, property));
-        });
         return ResponseEntity.ok(new ApiResponse(true, "Indexing started"));
     }
 
@@ -58,16 +58,6 @@ public class IndexingSitesImpl implements IndexingSitesService {
         return ResponseEntity.ok(new ApiResponse(true, "Indexing stopped"));
     }
 
-    private void indexingAllSites(){
-        List<SiteEntity> siteEntityList = getListSiteEntity();
-        try {
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            isIndexingStart = false;
-        }
-    }
-
     private List<SiteEntity> saveAndGetAllSiteEntity(){
         List<SiteEntity> siteEntityList = new ArrayList<>();
         for (Site sites : sitesList.getSites()){
@@ -77,6 +67,7 @@ public class IndexingSitesImpl implements IndexingSitesService {
             siteEntity.setStatus(Status.INDEXING);
             siteEntity.setUrl(sites.getUrl());
             siteEntityList.add(siteEntity);
+            siteRepository.save(siteEntity);
         }
         return siteEntityList;
     }

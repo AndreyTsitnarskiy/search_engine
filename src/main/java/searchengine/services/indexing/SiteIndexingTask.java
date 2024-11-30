@@ -1,6 +1,5 @@
 package searchengine.services.indexing;
 
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Connection;
@@ -62,6 +61,7 @@ public class SiteIndexingTask extends RecursiveAction {
             }
             siteEntity.setStatus(Status.INDEXING);
             siteEntity.setStatusTime(LocalDateTime.now());
+            log.info("PAGE: " + page);
             pageRepository.save(page);
             log.info("Save page: " + page.getPath());
 

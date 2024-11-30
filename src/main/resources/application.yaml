@@ -1,15 +1,17 @@
 # example values
 indexing-settings:
   sites:
+    - url: https://www.lenta.ru
+      name: Лента.ру
     - url: https://www.playback.ru
       name: PlayBack.Ru
-#    - url: https://charutti.ru
-#      name: Бренд ЧАРУТТИ
-#    - url: https://opt-opt-opt.ru
-#      name: ТриОпт
-    - url: https://dombulgakova.ru
+    - url: https://charutti.ru/
+      name: Бренд ЧАРУТТИ
+    - url: https://opt-opt-opt.ru/
+      name: ТриОпт
+    - url: https://dombulgakova.ru/
       name: PДом Булгакова
-    - url: https://www.svetlovka.ru
+    - url: https://www.svetlovka.ru/
       name: Светловка
 
 server:
@@ -22,8 +24,8 @@ spring:
   datasource:
     #url: jdbc:postgresql://host.docker.internal:5432/search_engine_db
     url: jdbc:postgresql://localhost:5432/search_engine_db
-    username: "${DB_USER}"
-    password: "${DB_PASS}"
+    username: se_user
+    password: app$diplomU$er
     #password: testPass
     driver-class-name: org.postgresql.Driver
     hikari:
@@ -45,7 +47,7 @@ spring:
     properties:
       hibernate:
         default_schema: sites_parsing
-        format_sql: false
+        format_sql: true
         use_sql_comments: true
         highlight_sql: true
         jdbc.batch_size: 50
@@ -53,7 +55,7 @@ spring:
         order_updates: true
         flush_mode: COMMIT
         generate_statistics: false
-        show_sql: false
+        show_sql: true
   main:
     allow-bean-definition-overriding: true
 
