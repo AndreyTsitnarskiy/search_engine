@@ -55,7 +55,7 @@ spring:
         order_updates: true
         flush_mode: COMMIT
         generate_statistics: false
-        show_sql: true
+        show_sql: false
   main:
     allow-bean-definition-overriding: true
 

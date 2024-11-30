@@ -2,22 +2,17 @@ package searchengine.services.indexing;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jsoup.Connection;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import searchengine.entity.PageEntity;
 import searchengine.entity.SiteEntity;
-import searchengine.entity.Status;
-import searchengine.repository.PageRepository;
-import searchengine.repository.SiteRepository;
 import searchengine.utility.ConnectionUtil;
 import searchengine.utility.PropertiesProject;
 
-import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RecursiveAction;
 
 @Slf4j
@@ -25,10 +20,10 @@ import java.util.concurrent.RecursiveAction;
 public class SiteIndexingTask extends RecursiveAction {
     private final String url;
     private final SiteEntity siteEntity;
-    private final Set<String> visitedUrls;
-    private final SiteRepository siteRepository;
-    private final PageRepository pageRepository;
     private final PropertiesProject property;
+    private final PageProcessServiceImpl pageProcessService;
+
+    private static final Set<String> visitedUrls = ConcurrentHashMap.newKeySet();
 
     @Override
     protected void compute() {
@@ -40,35 +35,37 @@ public class SiteIndexingTask extends RecursiveAction {
         }
 
         Set<SiteIndexingTask> siteIndexingTasks = new HashSet<>();
+        PageEntity pageEntity = new PageEntity();
+        pageEntity.setPath(url);
+        pageEntity.setSite(siteEntity);
 
         try {
-            Connection.Response response = (Connection.Response) ConnectionUtil.getConnection(url,
-                    property.getUserAgent(), property.getReferrer()).execute();
+            log.info("START: " + url);
+            Document doc = ConnectionUtil.getDocument(url,
+                    property.getReferrer(),
+                    property.getUserAgent());
 
-            int statusCode = response.statusCode();
-            Document doc = response.parse();
-
-            PageEntity page = new PageEntity(siteEntity, url, statusCode, doc.html());
+            pageEntity.setContent(doc.html());
+            pageEntity.setCode(200);
 
             Elements links = doc.select("a[href]");
-            for (Element link : links){
+            for (Element link : links) {
                 String url = link.absUrl("href");
-                if(url.startsWith(siteEntity.getUrl()) && !visitedUrls.contains(url)){
-                    SiteIndexingTask subTask = new SiteIndexingTask(url, siteEntity, visitedUrls, siteRepository, pageRepository, property);
+
+                if (url.startsWith(siteEntity.getUrl()) && !visitedUrls.contains(url)) {
+                    SiteIndexingTask subTask = new SiteIndexingTask(url, siteEntity, property, pageProcessService);
                     siteIndexingTasks.add(subTask);
                     subTask.fork();
                 }
             }
-            siteEntity.setStatus(Status.INDEXING);
-            siteEntity.setStatusTime(LocalDateTime.now());
-            log.info("PAGE: " + page);
-            pageRepository.save(page);
-            log.info("Save page: " + page.getPath());
-
-        } catch (IOException e) {
-            siteRepository.updateStatus(siteEntity.getId(), Status.FAILED, e.getMessage());
+        } catch (Exception e) {
+            log.error("ERROR ");
+            e.printStackTrace();
         }
-        for (SiteIndexingTask sub : siteIndexingTasks){
+
+        pageProcessService.savePageEntity(pageEntity);
+
+        for (SiteIndexingTask sub : siteIndexingTasks) {
             sub.join();
         }
     }

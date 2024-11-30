@@ -1,4 +1,4 @@
-package searchengine.services.indexing;
+package searchengine.services.indexing.interfaces;
 
 import org.springframework.http.ResponseEntity;
 import searchengine.dto.response.ApiResponse;

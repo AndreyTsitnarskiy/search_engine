@@ -2,7 +2,6 @@ package searchengine.controllers;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -10,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import searchengine.dto.response.ApiResponse;
 import searchengine.dto.search.ApiSearchResponse;
 import searchengine.dto.statistics.StatisticsResponse;
-import searchengine.services.indexing.IndexingSitesService;
+import searchengine.services.indexing.interfaces.IndexingSitesService;
 import searchengine.services.search.SearchService;
 import searchengine.services.statisitc.StatisticsService;
 
