@@ -43,7 +43,7 @@ public class PageProcessServiceImpl implements PageProcessService {
             forkJoinPool.invoke(new SiteIndexingTask(pageUrl, siteEntity, projectParameters, this));
             if (isSiteProcessingCompleted(siteEntity)) {
                 shutdownSiteForkJoinPool(siteEntity.getId());
-                log.info("Завершены все потоки для сайта: " + siteEntity);
+                log.info("Завершены все потоки для сайта: " + siteEntity.getUrl());
             }
         } catch (Exception e) {
             log.error("ERROR " + e.getMessage());
@@ -98,7 +98,6 @@ public class PageProcessServiceImpl implements PageProcessService {
             site.setLastError(lastError);
             siteRepository.save(site);
             siteErrorMap.put(siteEntity.getId(), true);
-            log.info("Оновление статусов в MAP метод updateStatusSiteFailed: " + siteErrorMap);
         } else {
             throw new EntityNotFoundException("Сайт не найден для изменения статуса на FAILED");
         }
@@ -117,7 +116,6 @@ public class PageProcessServiceImpl implements PageProcessService {
             site.setStatusTime(LocalDateTime.now());
             siteRepository.save(site);
             siteErrorMap.put(siteEntity.getId(), false);
-            log.info("Оновление статусов в MAP метод updateStatusSiteIndexing: " + siteErrorMap);
         } else {
             throw new EntityNotFoundException("Сайт не найден для изменения статуса на INDEXING");
         }

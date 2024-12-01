@@ -14,7 +14,6 @@ import searchengine.utility.UtilCheckString;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.RecursiveAction;
-import java.util.regex.Pattern;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -29,6 +28,11 @@ public class SiteIndexingTask extends RecursiveAction {
         if (UtilCheckString.isFileUrl(url)) {
             return;
         }
+        String siteName = siteEntity.getUrl();
+        if (!UtilCheckString.containsSiteName(url, siteName)) {
+            return;
+        }
+
         Set<SiteIndexingTask> subTasks = new HashSet<>();
 
         try {
@@ -56,8 +60,11 @@ public class SiteIndexingTask extends RecursiveAction {
         } catch (Exception e) {
             log.error("ERROR processing URL: " + url, e);
             int code = ConnectionUtil.getStatusCode(url);
-            pageProcessService.updateStatusPage(siteEntity, url, code);
-            log.info("Идем изменять статус " + siteEntity);
+            if(code != 0){
+                pageProcessService.updateStatusPage(siteEntity, url, code);
+            } else {
+                pageProcessService.updateStatusPage(siteEntity, url, 500);
+            }
             pageProcessService.updateStatusSiteFailed(siteEntity, e.getMessage());
         }
         subTasks.forEach(SiteIndexingTask::join);

@@ -20,7 +20,7 @@ public class ConnectionUtil {
         return Jsoup.connect(pagePath)
                 .userAgent(userAgent)
                 .referrer(referrer)
-                .timeout(10000)
+                .timeout(3000)
                 .followRedirects(true)
                 .ignoreHttpErrors(true);
     }

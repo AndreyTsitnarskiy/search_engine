@@ -27,4 +27,11 @@ public class UtilCheckString {
         }
         return in;
     }
+
+    public static boolean containsSiteName(String url, String siteName) {
+        String cleanedUrl = reworkUrl(url);
+        String cleanedSiteName = reworkUrl(siteName);
+
+        return cleanedUrl.startsWith(cleanedSiteName);
+    }
 }
