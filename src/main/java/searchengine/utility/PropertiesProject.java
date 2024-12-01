@@ -17,15 +17,4 @@ public class PropertiesProject {
     @Value("${connect.referrer}")
     private String referrer;
 
-    @Value("${file.extensions}")
-    private String fileExtensions;
-
-    @Value("${error.interrupted}")
-    private String interruptedByUserMessage;
-
-    @Value("${error.certificate}")
-    private String certificateError;
-
-    @Value("${error.unknown}")
-    private String unknownError;
 }

@@ -9,7 +9,7 @@ import org.jsoup.select.Elements;
 import searchengine.entity.SiteEntity;
 import searchengine.utility.ConnectionUtil;
 import searchengine.utility.PropertiesProject;
-import searchengine.utility.UtilCheckString;
+import searchengine.utility.UtilCheck;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -25,18 +25,18 @@ public class SiteIndexingTask extends RecursiveAction {
 
     @Override
     protected void compute() {
-        if (UtilCheckString.isFileUrl(url)) {
+        if (UtilCheck.isFileUrl(url)) {
             return;
         }
         String siteName = siteEntity.getUrl();
-        if (!UtilCheckString.containsSiteName(url, siteName)) {
+        if (!UtilCheck.containsSiteName(url, siteName)) {
             return;
         }
 
         Set<SiteIndexingTask> subTasks = new HashSet<>();
 
         try {
-            log.info("START PAGE: " + url);
+            //log.info("START PAGE: " + url);
             Connection connection = ConnectionUtil.getConnection(url, property.getReferrer(), property.getUserAgent());
             Document doc = connection.get();
 
@@ -50,7 +50,7 @@ public class SiteIndexingTask extends RecursiveAction {
             Elements links = doc.select("a[href]");
             for (Element link : links) {
                 String subUrl = link.absUrl("href");
-                if (subUrl.startsWith(UtilCheckString.reworkUrl(siteEntity.getUrl()))
+                if (subUrl.startsWith(UtilCheck.reworkUrl(siteEntity.getUrl()))
                         && !pageProcessService.isUrlVisited(subUrl)) {
                     SiteIndexingTask subTask = new SiteIndexingTask(subUrl, siteEntity, property, pageProcessService);
                     subTasks.add(subTask);
@@ -60,12 +60,9 @@ public class SiteIndexingTask extends RecursiveAction {
         } catch (Exception e) {
             log.error("ERROR processing URL: " + url, e);
             int code = ConnectionUtil.getStatusCode(url);
-            if(code != 0){
-                pageProcessService.updateStatusPage(siteEntity, url, code);
-            } else {
-                pageProcessService.updateStatusPage(siteEntity, url, 500);
-            }
+            pageProcessService.updateStatusPage(siteEntity, url, code != 0 ? code : 500);
             pageProcessService.updateStatusSiteFailed(siteEntity, e.getMessage());
+            return;
         }
         subTasks.forEach(SiteIndexingTask::join);
     }

@@ -16,14 +16,33 @@ import java.net.URL;
 @UtilityClass
 public class ConnectionUtil {
 
+    private static final int MAX_RETRIES = 3;
+    private static final int TIMEOUT = 5000; //
+
     public static Connection getConnection(String pagePath, String userAgent, String referrer) {
         return Jsoup.connect(pagePath)
                 .userAgent(userAgent)
                 .referrer(referrer)
-                .timeout(3000)
+                //.timeout(3000)
                 .followRedirects(true)
                 .ignoreHttpErrors(true);
     }
+
+/*    public static Document getConnectionWithRetry(String url, String userAgent, String referrer, int retries) throws Exception {
+        int attempts = 0;
+        while (attempts < retries) {
+            try {
+                return ConnectionUtil.getConnection(url, referrer, userAgent).get();
+            } catch (IOException e) {
+                attempts++;
+                if (attempts >= retries) {
+                    throw new Exception("Failed to connect after " + retries + " attempts", e);
+                }
+                Thread.sleep(TIMEOUT);
+            }
+        }
+        return null;
+    }*/
 
     public static int getStatusCode(String url) {
         int code = 0;

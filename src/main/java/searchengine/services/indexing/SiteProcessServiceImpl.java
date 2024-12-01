@@ -9,7 +9,7 @@ import searchengine.entity.SiteEntity;
 import searchengine.entity.Status;
 import searchengine.repository.SiteRepository;
 import searchengine.services.indexing.interfaces.PageProcessService;
-import searchengine.services.indexing.interfaces.SIteProcessService;
+import searchengine.services.indexing.interfaces.SiteProcessService;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class SiteProcessServiceImpl implements SIteProcessService {
+public class SiteProcessServiceImpl implements SiteProcessService {
 
     private final SiteRepository siteRepository;
     private final PageProcessService pageProcessService;

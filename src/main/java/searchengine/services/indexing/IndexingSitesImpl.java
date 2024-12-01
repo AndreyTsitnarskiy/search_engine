@@ -11,11 +11,10 @@ import searchengine.entity.SiteEntity;
 import searchengine.entity.Status;
 import searchengine.repository.SiteRepository;
 import searchengine.services.indexing.interfaces.IndexingSitesService;
-import searchengine.services.indexing.interfaces.SIteProcessService;
+import searchengine.services.indexing.interfaces.SiteProcessService;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.*;
 
 @Slf4j
 @Service
@@ -24,8 +23,7 @@ public class IndexingSitesImpl implements IndexingSitesService {
     private volatile boolean isIndexingStart = false;
     private final SiteRepository siteRepository;
     private final SitesList sitesList;
-    private final SIteProcessService sIteProcessService;
-    private final ForkJoinPool forkJoinPool = new ForkJoinPool();
+    private final SiteProcessService sIteProcessService;
 
     @Override
     public ResponseEntity<ApiResponse> startIndexing() {
@@ -47,7 +45,7 @@ public class IndexingSitesImpl implements IndexingSitesService {
 
     @Override
     public ResponseEntity<ApiResponse> stopIndexing() {
-        forkJoinPool.shutdownNow();
+
         return ResponseEntity.ok(new ApiResponse(true, "Indexing stopped"));
     }
 

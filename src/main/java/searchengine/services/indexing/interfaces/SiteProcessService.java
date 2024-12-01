@@ -5,7 +5,7 @@ import searchengine.entity.SiteEntity;
 
 import java.util.List;
 
-public interface SIteProcessService {
+public interface SiteProcessService {
 
     @Transactional
     void parseSites(List<SiteEntity> siteUrls);

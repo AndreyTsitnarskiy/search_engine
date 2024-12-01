@@ -9,12 +9,24 @@ import org.springframework.transaction.annotation.Transactional;
 import searchengine.entity.SiteEntity;
 import searchengine.entity.Status;
 
+import java.time.LocalDateTime;
+
 @Repository
 public interface SiteRepository extends JpaRepository<SiteEntity, Integer> {
 
     @Modifying
     @Transactional
-    @Query("UPDATE SiteEntity s SET s.status = :status, s.lastError = :error, s.statusTime = CURRENT_TIMESTAMP WHERE s.id = :siteId")
-    void updateStatus(@Param("siteId") int siteId, @Param("status") Status status, @Param("error") String error);
+    @Query("UPDATE SiteEntity s SET s.status = :status, s.statusTime = :statusTime WHERE s.id = :siteId")
+    void updateSiteStatus(@Param("siteId") int siteId,
+                          @Param("status") Status status,
+                          @Param("statusTime") LocalDateTime statusTime);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE SiteEntity s SET s.status = :status, s.statusTime = :statusTime, s.lastError = :lastError WHERE s.id = :siteId")
+    void updateSiteStatusAndLastError(@Param("siteId") int siteId,
+                                      @Param("status") Status status,
+                                      @Param("statusTime") LocalDateTime statusTime,
+                                      @Param("lastError") String lastError);
 
 }

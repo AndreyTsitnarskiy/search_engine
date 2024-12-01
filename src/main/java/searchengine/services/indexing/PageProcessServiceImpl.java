@@ -7,6 +7,7 @@ import org.jsoup.nodes.Document;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import searchengine.config.SitesList;
 import searchengine.entity.PageEntity;
 import searchengine.entity.SiteEntity;
 import searchengine.entity.Status;
@@ -14,6 +15,7 @@ import searchengine.repository.PageRepository;
 import searchengine.repository.SiteRepository;
 import searchengine.services.indexing.interfaces.PageProcessService;
 import searchengine.utility.PropertiesProject;
+import searchengine.utility.UtilCheck;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -29,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class PageProcessServiceImpl implements PageProcessService {
 
+    private final SitesList sitesList;
     private final PageRepository pageRepository;
     private final SiteRepository siteRepository;
     private final PropertiesProject projectParameters;
@@ -38,7 +41,8 @@ public class PageProcessServiceImpl implements PageProcessService {
 
     @Override
     public void parsePage(String pageUrl, Document document, SiteEntity siteEntity) {
-        ForkJoinPool forkJoinPool = sitePools.computeIfAbsent(siteEntity.getId(), id -> new ForkJoinPool());
+        ForkJoinPool forkJoinPool = sitePools.computeIfAbsent(siteEntity.getId(),
+                id -> new ForkJoinPool(UtilCheck.calculateForkJoinPoolSize(sitesList.getSites().size())));
         try {
             forkJoinPool.invoke(new SiteIndexingTask(pageUrl, siteEntity, projectParameters, this));
             if (isSiteProcessingCompleted(siteEntity)) {
@@ -54,6 +58,7 @@ public class PageProcessServiceImpl implements PageProcessService {
     public void clearSiteState(int siteId) {
         siteErrorMap.remove(siteId);
         visitedUrls.removeIf(url -> url.startsWith(siteRepository.findById(siteId).get().getUrl()));
+        System.gc();
     }
 
     @Override
@@ -90,17 +95,8 @@ public class PageProcessServiceImpl implements PageProcessService {
 
     @Transactional
     public void updateStatusSiteFailed(SiteEntity siteEntity, String lastError) {
-        Optional<SiteEntity> optionalSiteEntity = siteRepository.findById(siteEntity.getId());
-        if (optionalSiteEntity.isPresent()) {
-            SiteEntity site = optionalSiteEntity.get();
-            site.setStatus(Status.FAILED);
-            site.setStatusTime(LocalDateTime.now());
-            site.setLastError(lastError);
-            siteRepository.save(site);
-            siteErrorMap.put(siteEntity.getId(), true);
-        } else {
-            throw new EntityNotFoundException("Сайт не найден для изменения статуса на FAILED");
-        }
+        siteRepository.updateSiteStatusAndLastError(siteEntity.getId(), Status.INDEXING, LocalDateTime.now(), lastError);
+        siteErrorMap.put(siteEntity.getId(), true);
     }
 
     public boolean checkConditionStatusSite(SiteEntity siteEntity) {
@@ -109,28 +105,22 @@ public class PageProcessServiceImpl implements PageProcessService {
 
     @Transactional
     public void updateStatusSiteIndexing(SiteEntity siteEntity) {
-        Optional<SiteEntity> optionalSiteEntity = siteRepository.findById(siteEntity.getId());
-        if (optionalSiteEntity.isPresent()) {
-            SiteEntity site = optionalSiteEntity.get();
-            site.setStatus(Status.INDEXING);
-            site.setStatusTime(LocalDateTime.now());
-            siteRepository.save(site);
-            siteErrorMap.put(siteEntity.getId(), false);
-        } else {
-            throw new EntityNotFoundException("Сайт не найден для изменения статуса на INDEXING");
-        }
+        siteRepository.updateSiteStatus(siteEntity.getId(), Status.INDEXING, LocalDateTime.now());
+        siteErrorMap.put(siteEntity.getId(), false);
     }
 
     public void shutdownSiteForkJoinPool(int siteId) {
         ForkJoinPool pool = sitePools.get(siteId);
         if (pool != null) {
+            log.info("Active threads before shutdown: {}", pool.getActiveThreadCount());
+            log.info("Queued tasks: {}", pool.getQueuedTaskCount());
             pool.shutdown();
             try {
                 if (!pool.awaitTermination(10, TimeUnit.MINUTES)) {
-                    log.warn("ForkJoinPool for site {} did not terminate within the timeout.", siteId);
+                    log.warn("ForkJoinPool for site {} did not terminate in time.", siteId);
                 }
             } catch (InterruptedException e) {
-                log.error("Interrupted while waiting for ForkJoinPool for site {} to terminate", siteId, e);
+                log.error("Interrupted while waiting for ForkJoinPool for site {}", siteId, e);
                 Thread.currentThread().interrupt();
             }
             log.info("ForkJoinPool for site {} завершён.", siteId);
