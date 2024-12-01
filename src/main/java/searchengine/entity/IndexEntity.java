@@ -1,25 +1,31 @@
 package searchengine.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 
 @Data
+@NoArgsConstructor
+@RequiredArgsConstructor
 @Entity
-@Table(name = "index_table", schema = "sites_parsing")
+@Table(name = "indexes_table", schema = "sites_parsing", uniqueConstraints = @UniqueConstraint(columnNames = {"page_id", "lemma_id"}))
 public class IndexEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    private int id;
 
+    @NonNull
     @ManyToOne
     @JoinColumn(name = "page_id", nullable = false)
-    private PageEntity pageEntity;
+    private PageEntity page;
 
+    @NonNull
     @ManyToOne
     @JoinColumn(name = "lemma_id", nullable = false)
-    private LemmaEntity lemmaEntity;
+    private LemmaEntity lemma;
 
-    @Column(nullable = false)
+    @NonNull
+    @Column(nullable = false, name = "rank")
     private float rank;
+
 }

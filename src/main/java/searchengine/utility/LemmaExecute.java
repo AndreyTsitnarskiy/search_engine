@@ -1,14 +1,16 @@
 package searchengine.utility;
 
 import lombok.experimental.UtilityClass;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 
 import java.io.IOException;
 import java.util.*;
 
+@Slf4j
 @UtilityClass
-public class LemmasExecute {
+public class LemmaExecute {
 
     private LuceneMorphology morphology;
     private static final String WORD_TYPE_REGEX = "\\W\\w&&[^а-яА-Я\\s]";
@@ -18,7 +20,7 @@ public class LemmasExecute {
         try {
             morphology = new RussianLuceneMorphology();
         } catch (IOException e) {
-            e.getStackTrace();
+            log.error("Error initializing LuceneMorphology", e);
         }
     }
 
@@ -91,7 +93,7 @@ public class LemmasExecute {
     }
 
     private boolean anyWordBaseBelongToParticle(List<String> wordBaseForms) {
-        Object LemmaExecute;
-        return wordBaseForms.stream().anyMatch(LemmasExecute::isParticle);
+        return wordBaseForms.stream().anyMatch(LemmaExecute::isParticle);
     }
 }
+

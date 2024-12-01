@@ -1,14 +1,13 @@
-package searchengine.services.interfaces;
+package searchengine.services.indexing.interfaces;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import searchengine.entity.SiteEntity;
 
 import java.util.List;
 
-public interface SiteParsingService {
+public interface SiteProcessService {
 
     @Transactional
     void parseSites(List<SiteEntity> siteUrls);
-
     void parseSite(SiteEntity siteEntity);
 }

@@ -1,22 +1,23 @@
 package searchengine.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 
-import java.util.List;
-
+@Getter
+@Setter
+@ToString
+@AllArgsConstructor
+@NoArgsConstructor
 @Entity
 @Table(name = "page", schema = "sites_parsing")
-@Data
 public class PageEntity {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    private int id;
 
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
     @JoinColumn(name = "site_id", nullable = false)
-    private SiteEntity siteEntity;
+    private SiteEntity site;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String path;
@@ -24,9 +25,13 @@ public class PageEntity {
     @Column(nullable = false)
     private int code;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT")
     private String content;
 
-    @OneToMany(mappedBy = "pageEntity", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<IndexEntity> indexes;
+    public PageEntity(SiteEntity site, String path, int code, String content) {
+        this.site = site;
+        this.path = path;
+        this.code = code;
+        this.content = content;
+    }
 }

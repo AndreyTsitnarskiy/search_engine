@@ -5,5 +5,7 @@ import org.springframework.stereotype.Repository;
 import searchengine.entity.LemmaEntity;
 
 @Repository
-public interface LemmaRepository extends JpaRepository<LemmaEntity, Long> {
+public interface LemmaRepository extends JpaRepository<LemmaEntity, Integer> {
+
+
 }

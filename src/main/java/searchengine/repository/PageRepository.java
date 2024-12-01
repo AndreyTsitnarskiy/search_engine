@@ -5,5 +5,5 @@ import org.springframework.stereotype.Repository;
 import searchengine.entity.PageEntity;
 
 @Repository
-public interface PageRepository extends JpaRepository<PageEntity, Long> {
+public interface PageRepository extends JpaRepository<PageEntity, Integer> {
 }

@@ -1,26 +1,29 @@
 package searchengine.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.*;
 
-@Data
+@Getter
+@Setter
+@ToString
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "site", schema = "sites_parsing")
 public class SiteEntity {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    private int id;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Statuses statuses;
+    private Status status;
 
     @Column(name = "status_time", nullable = false)
-    private LocalDateTime localDateTime;
+    private LocalDateTime statusTime;
 
     @Column(name = "last_error", columnDefinition = "TEXT")
     private String lastError;
@@ -31,9 +34,6 @@ public class SiteEntity {
     @Column(nullable = false, length = 255)
     private String name;
 
-    @OneToMany(mappedBy = "siteEntity", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<PageEntity> pages;
-
-    @OneToMany(mappedBy = "siteEntity", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<LemmaEntity> lemmas;
+    @OneToMany(mappedBy = "site", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PageEntity> pages = new ArrayList<>();
 }

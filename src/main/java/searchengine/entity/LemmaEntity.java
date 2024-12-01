@@ -1,37 +1,48 @@
 package searchengine.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-import java.util.List;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
 
-@Data
-@Entity
+@Getter
+@Setter
+@ToString
+@AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "lemma", schema = "sites_parsing")
+@Entity
+@Table(name = "lemmas", schema = "sites_parsing", uniqueConstraints = @UniqueConstraint(columnNames = {"site_id", "lemma"}))
 public class LemmaEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    private Integer id;
 
     @ManyToOne
     @JoinColumn(name = "site_id", nullable = false)
-    private SiteEntity siteEntity;
+    private SiteEntity site;
 
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false, columnDefinition = "VARCHAR(255)")
     private String lemma;
 
     @Column(nullable = false)
-    private int frequency;
+    private Integer frequency;
 
-    @OneToMany(mappedBy = "lemmaEntity", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<IndexEntity> indices;
+    @OneToMany(mappedBy = "lemma", cascade = CascadeType.ALL)
+    private Set<IndexEntity> indices = new HashSet<>();
 
-    public LemmaEntity(SiteEntity siteEntity, String lemma, int frequency) {
-        this.siteEntity = siteEntity;
-        this.lemma = lemma;
-        this.frequency = frequency;
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        LemmaEntity that = (LemmaEntity) o;
+        return Objects.equals(site, that.site) && Objects.equals(lemma, that.lemma);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(site, lemma);
     }
 }
