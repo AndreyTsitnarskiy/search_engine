@@ -1,18 +1,18 @@
 # example values
 indexing-settings:
   sites:
-    - url: https://www.lenta.ru/
+    - url: https://lenta.ru/
       name: Лента.ру
     - url: https://www.playback.ru/
       name: PlayBack.Ru
 #    - url: https://charutti.ru/
 #      name: Бренд ЧАРУТТИ
-    - url: https://opt-opt-opt.ru/
-      name: ТриОпт
-    - url: https://dombulgakova.ru/
-      name: PДом Булгакова
-#    - url: https://www.svetlovka.ru/
-#      name: Светловка
+#    - url: https://opt-opt-opt.ru/
+#      name: ТриОпт
+#    - url: https://dombulgakova.ru/
+#      name: PДом Булгакова
+#    - url: https://www.atomstroy.net/
+#      name: Атом строй комплекс
 
 server:
   port: 10100

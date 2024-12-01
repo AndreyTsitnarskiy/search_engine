@@ -9,6 +9,7 @@ import org.jsoup.select.Elements;
 import searchengine.entity.SiteEntity;
 import searchengine.utility.ConnectionUtil;
 import searchengine.utility.PropertiesProject;
+import searchengine.utility.UtilCheckString;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -23,18 +24,15 @@ public class SiteIndexingTask extends RecursiveAction {
     private final PropertiesProject property;
     private final PageProcessServiceImpl pageProcessService;
 
-    private static final Pattern FILE_EXTENSION_PATTERN = Pattern.compile(".*\\.(pdf|docx?|xlsx?|jpg|jpeg|gif|png|mp3|mp4|aac|json|csv|exe|apk|rar|zip|xml|jar|bin|svg|nc|webp|m|fig|eps)$", Pattern.CASE_INSENSITIVE);
-
     @Override
     protected void compute() {
-        if (FILE_EXTENSION_PATTERN.matcher(url).matches()) {
-            log.info("Skipping file URL: {}", url);
+        if (UtilCheckString.isFileUrl(url)) {
             return;
         }
-
         Set<SiteIndexingTask> subTasks = new HashSet<>();
+
         try {
-            log.info("START: " + url);
+            log.info("START PAGE: " + url);
             Connection connection = ConnectionUtil.getConnection(url, property.getReferrer(), property.getUserAgent());
             Document doc = connection.get();
 
@@ -48,7 +46,8 @@ public class SiteIndexingTask extends RecursiveAction {
             Elements links = doc.select("a[href]");
             for (Element link : links) {
                 String subUrl = link.absUrl("href");
-                if (subUrl.startsWith(siteEntity.getUrl()) && !pageProcessService.isUrlVisited(subUrl)) {
+                if (subUrl.startsWith(UtilCheckString.reworkUrl(siteEntity.getUrl()))
+                        && !pageProcessService.isUrlVisited(subUrl)) {
                     SiteIndexingTask subTask = new SiteIndexingTask(subUrl, siteEntity, property, pageProcessService);
                     subTasks.add(subTask);
                     subTask.fork();
@@ -58,8 +57,8 @@ public class SiteIndexingTask extends RecursiveAction {
             log.error("ERROR processing URL: " + url, e);
             int code = ConnectionUtil.getStatusCode(url);
             pageProcessService.updateStatusPage(siteEntity, url, code);
+            log.info("Идем изменять статус " + siteEntity);
             pageProcessService.updateStatusSiteFailed(siteEntity, e.getMessage());
-            //pageProcessService.markSiteAsFailed(siteEntity.getId()); // Помечаем сайт как неуспешный
         }
         subTasks.forEach(SiteIndexingTask::join);
     }

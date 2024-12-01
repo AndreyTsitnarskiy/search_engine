@@ -22,79 +22,44 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PageProcessServiceImpl implements PageProcessService {
 
-    private static final ForkJoinPool FORK_JOIN_POOL = new ForkJoinPool();
-
     private final PageRepository pageRepository;
     private final SiteRepository siteRepository;
     private final PropertiesProject projectParameters;
     private final Set<String> visitedUrls = ConcurrentHashMap.newKeySet();
-    private final Map<Integer, Boolean> siteErrorMap = new ConcurrentHashMap<>(); // Ошибки сайтов
-    //private final Map<Integer, AtomicInteger> activePagesMap = new ConcurrentHashMap<>(); // Счетчик активных страниц
+    private final Map<Integer, Boolean> siteErrorMap = new ConcurrentHashMap<>();
+    private final Map<Integer, ForkJoinPool> sitePools = new ConcurrentHashMap<>();
 
     @Override
     public void parsePage(String pageUrl, Document document, SiteEntity siteEntity) {
-        ForkJoinPool forkJoinPool = new ForkJoinPool();
+        ForkJoinPool forkJoinPool = sitePools.computeIfAbsent(siteEntity.getId(), id -> new ForkJoinPool());
         try {
-            FORK_JOIN_POOL.invoke(new SiteIndexingTask(pageUrl, siteEntity, projectParameters, this));
-        } catch (Exception e) {
-            log.info("ОШИБКА ");
-            e.printStackTrace();
-        } finally {
-            forkJoinPool.shutdown();
-            try {
-                if (!forkJoinPool.awaitTermination(10, TimeUnit.MINUTES)) {
-                    log.warn("ForkJoinPool did not terminate within the timeout.");
-                }
-            } catch (InterruptedException e) {
-                log.error("Interrupted while waiting for ForkJoinPool to terminate", e);
-                Thread.currentThread().interrupt();
+            forkJoinPool.invoke(new SiteIndexingTask(pageUrl, siteEntity, projectParameters, this));
+            if (isSiteProcessingCompleted(siteEntity)) {
+                shutdownSiteForkJoinPool(siteEntity.getId());
+                log.info("Завершены все потоки для сайта: " + siteEntity);
             }
-            log.info("ForkJoinPool завершён.");
+        } catch (Exception e) {
+            log.error("ERROR " + e.getMessage());
         }
     }
 
     @Override
     public void clearSiteState(int siteId) {
         siteErrorMap.remove(siteId);
-        //activePagesMap.remove(siteId);
         visitedUrls.removeIf(url -> url.startsWith(siteRepository.findById(siteId).get().getUrl()));
     }
 
     @Override
     public void initializeSite(int siteId) {
-        siteErrorMap.put(siteId, false); // Изначально ошибок нет
-        //activePagesMap.put(siteId, new AtomicInteger(0)); // Счетчик активных страниц
+        siteErrorMap.put(siteId, false);
     }
-
-/*    // Пометить сайт как содержащий ошибку
-    public void markSiteAsFailed(int siteId) {
-        siteErrorMap.put(siteId, true);
-    }
-
-    // Увеличение счетчика активных страниц
-    public void incrementActivePages(int siteId) {
-        activePagesMap.get(siteId).incrementAndGet();
-    }
-
-    // Уменьшение счетчика активных страниц
-    public void decrementActivePagesAndUpdateStatus(SiteEntity siteEntity) {
-        int remainingPages = activePagesMap.get(siteEntity.getId()).decrementAndGet();
-        if (remainingPages == 0) { // Все страницы обработаны
-            boolean hasErrors = siteErrorMap.get(siteEntity.getId());
-            siteEntity.setStatus(hasErrors ? Status.FAILED : Status.INDEXING);
-            siteEntity.setStatusTime(LocalDateTime.now());
-            siteEntity.setLastError(hasErrors ? "Some pages failed to process." : null);
-            siteRepository.save(siteEntity); // Обновляем статус сайта в базе
-            log.info("Site {} indexing completed. Final status: {}", siteEntity.getUrl(), siteEntity.getStatus());
-        }
-    }*/
 
     public boolean isUrlVisited(String url) {
         return !visitedUrls.add(url);
@@ -102,7 +67,6 @@ public class PageProcessServiceImpl implements PageProcessService {
 
     @Transactional
     public void processPage(String url, Document document, SiteEntity siteEntity) {
-        //incrementActivePages(siteEntity.getId());
         try {
             PageEntity pageEntity = new PageEntity();
             pageEntity.setPath(url);
@@ -111,9 +75,7 @@ public class PageProcessServiceImpl implements PageProcessService {
             pageEntity.setCode(200);
             pageRepository.save(pageEntity);
         } catch (DataIntegrityViolationException e) {
-            log.info("Запись уже существует в базе данных для страницы " + siteEntity.getUrl() + url);
-        } finally {
-            //decrementActivePagesAndUpdateStatus(siteEntity); // Уменьшаем счетчик
+            log.error("Запись уже существует в базе данных для страницы " + siteEntity.getUrl() + url);
         }
     }
 
@@ -134,8 +96,9 @@ public class PageProcessServiceImpl implements PageProcessService {
             site.setStatus(Status.FAILED);
             site.setStatusTime(LocalDateTime.now());
             site.setLastError(lastError);
-            siteRepository.save(siteEntity);
+            siteRepository.save(site);
             siteErrorMap.put(siteEntity.getId(), true);
+            log.info("Оновление статусов в MAP метод updateStatusSiteFailed: " + siteErrorMap);
         } else {
             throw new EntityNotFoundException("Сайт не найден для изменения статуса на FAILED");
         }
@@ -152,10 +115,31 @@ public class PageProcessServiceImpl implements PageProcessService {
             SiteEntity site = optionalSiteEntity.get();
             site.setStatus(Status.INDEXING);
             site.setStatusTime(LocalDateTime.now());
-            siteRepository.save(siteEntity);
+            siteRepository.save(site);
             siteErrorMap.put(siteEntity.getId(), false);
+            log.info("Оновление статусов в MAP метод updateStatusSiteIndexing: " + siteErrorMap);
         } else {
             throw new EntityNotFoundException("Сайт не найден для изменения статуса на INDEXING");
         }
+    }
+
+    public void shutdownSiteForkJoinPool(int siteId) {
+        ForkJoinPool pool = sitePools.get(siteId);
+        if (pool != null) {
+            pool.shutdown();
+            try {
+                if (!pool.awaitTermination(10, TimeUnit.MINUTES)) {
+                    log.warn("ForkJoinPool for site {} did not terminate within the timeout.", siteId);
+                }
+            } catch (InterruptedException e) {
+                log.error("Interrupted while waiting for ForkJoinPool for site {} to terminate", siteId, e);
+                Thread.currentThread().interrupt();
+            }
+            log.info("ForkJoinPool for site {} завершён.", siteId);
+        }
+    }
+
+    public boolean isSiteProcessingCompleted(SiteEntity siteEntity) {
+        return visitedUrls.stream().noneMatch(url -> url.startsWith(siteEntity.getUrl()));
     }
 }
