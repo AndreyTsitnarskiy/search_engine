@@ -25,8 +25,7 @@ public class PageEntity {
     @Column(nullable = false)
     private int code;
 
-    @Lob
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT")
     private String content;
 
     public PageEntity(SiteEntity site, String path, int code, String content) {

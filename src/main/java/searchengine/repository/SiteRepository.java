@@ -17,8 +17,4 @@ public interface SiteRepository extends JpaRepository<SiteEntity, Integer> {
     @Query("UPDATE SiteEntity s SET s.status = :status, s.lastError = :error, s.statusTime = CURRENT_TIMESTAMP WHERE s.id = :siteId")
     void updateStatus(@Param("siteId") int siteId, @Param("status") Status status, @Param("error") String error);
 
-    @Modifying
-    @Transactional
-    @Query("UPDATE SiteEntity s SET s.status = 'FAILED', s.lastError = :error, s.statusTime = CURRENT_TIMESTAMP WHERE s.status = 'INDEXING'")
-    void updateAllFailed(@Param("error") String error);
 }

@@ -38,13 +38,17 @@ public class SiteIndexingTask extends RecursiveAction {
             Connection connection = ConnectionUtil.getConnection(url, property.getReferrer(), property.getUserAgent());
             Document doc = connection.get();
 
+            String uri = url.substring(siteEntity.getUrl().length());
+            pageProcessService.processPage(uri, doc, siteEntity);
+
+            if(pageProcessService.checkConditionStatusSite(siteEntity)){
+                pageProcessService.updateStatusSiteIndexing(siteEntity);
+            }
+
             Elements links = doc.select("a[href]");
             for (Element link : links) {
                 String subUrl = link.absUrl("href");
                 if (subUrl.startsWith(siteEntity.getUrl()) && !pageProcessService.isUrlVisited(subUrl)) {
-                    //log.info("Processing URL: {}", url);
-                    String uri = url.substring(siteEntity.getUrl().length());
-                    pageProcessService.processPage(uri, doc, siteEntity);
                     SiteIndexingTask subTask = new SiteIndexingTask(subUrl, siteEntity, property, pageProcessService);
                     subTasks.add(subTask);
                     subTask.fork();
@@ -52,6 +56,10 @@ public class SiteIndexingTask extends RecursiveAction {
             }
         } catch (Exception e) {
             log.error("ERROR processing URL: " + url, e);
+            int code = ConnectionUtil.getStatusCode(url);
+            pageProcessService.updateStatusPage(siteEntity, url, code);
+            pageProcessService.updateStatusSiteFailed(siteEntity, e.getMessage());
+            //pageProcessService.markSiteAsFailed(siteEntity.getId()); // Помечаем сайт как неуспешный
         }
         subTasks.forEach(SiteIndexingTask::join);
     }
