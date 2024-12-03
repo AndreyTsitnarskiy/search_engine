@@ -27,5 +27,4 @@ public class IndexEntity {
     @NonNull
     @Column(nullable = false, name = "rank")
     private float rank;
-
 }

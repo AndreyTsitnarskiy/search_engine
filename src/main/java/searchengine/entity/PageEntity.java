@@ -27,11 +27,4 @@ public class PageEntity {
 
     @Column(columnDefinition = "TEXT")
     private String content;
-
-    public PageEntity(SiteEntity site, String path, int code, String content) {
-        this.site = site;
-        this.path = path;
-        this.code = code;
-        this.content = content;
-    }
 }

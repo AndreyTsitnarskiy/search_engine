@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.util.HashSet;
-import java.util.Objects;
 import java.util.Set;
 
 @Getter
@@ -32,17 +31,4 @@ public class LemmaEntity {
 
     @OneToMany(mappedBy = "lemma", cascade = CascadeType.ALL)
     private Set<IndexEntity> indices = new HashSet<>();
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        LemmaEntity that = (LemmaEntity) o;
-        return Objects.equals(site, that.site) && Objects.equals(lemma, that.lemma);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(site, lemma);
-    }
 }

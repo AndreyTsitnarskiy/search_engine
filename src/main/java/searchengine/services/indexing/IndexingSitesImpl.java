@@ -11,6 +11,7 @@ import searchengine.entity.SiteEntity;
 import searchengine.entity.Status;
 import searchengine.repository.SiteRepository;
 import searchengine.services.indexing.interfaces.IndexingSitesService;
+import searchengine.services.indexing.interfaces.PageProcessService;
 import searchengine.services.indexing.interfaces.SiteProcessService;
 
 import java.time.LocalDateTime;
@@ -23,7 +24,8 @@ public class IndexingSitesImpl implements IndexingSitesService {
     private volatile boolean isIndexingStart = false;
     private final SiteRepository siteRepository;
     private final SitesList sitesList;
-    private final SiteProcessService sIteProcessService;
+    private final SiteProcessService siteProcessService;
+    private final PageProcessService pageProcessService;
 
     @Override
     public ResponseEntity<ApiResponse> startIndexing() {
@@ -31,7 +33,8 @@ public class IndexingSitesImpl implements IndexingSitesService {
             return ResponseEntity.ok(new ApiResponse(false, "Индексация не запущена"));
         } else {
             isIndexingStart = true;
-            new Thread(this::indexingAllSites).start();
+            //new Thread(this::indexingAllSites).start(); основной запуск потоков и парсинг
+            pageProcessService.tempMethodTests();
         }
         return ResponseEntity.ok(new ApiResponse(true, "Indexing started"));
     }
@@ -52,7 +55,7 @@ public class IndexingSitesImpl implements IndexingSitesService {
     private void indexingAllSites(){
         List<SiteEntity> siteEntityList = getListSiteEntity();
         try {
-            sIteProcessService.parseSites(siteEntityList);
+            siteProcessService.parseSites(siteEntityList);
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
