@@ -45,13 +45,13 @@ public class PageProcessServiceImpl implements PageProcessService {
         ForkJoinPool forkJoinPool = sitePools.computeIfAbsent(siteEntity.getId(),
                 id -> new ForkJoinPool(UtilCheck.calculateForkJoinPoolSize(sitesList.getSites().size())));
         try {
-            forkJoinPool.invoke(new SiteIndexingTask(pageUrl, siteEntity, projectParameters, this));
+            forkJoinPool.invoke(new SiteTask(pageUrl, siteEntity, projectParameters, this));
             if (isSiteProcessingCompleted(siteEntity)) {
                 shutdownSiteForkJoinPool(siteEntity.getId());
                 log.info("Завершены все потоки для сайта: " + siteEntity.getUrl());
                 int totalPageCount = pageRepository.countPagesBySiteId(siteEntity.getId());
                 if(totalPageCount != 0) {
-                    batchProcessingLemmaAndIndex(siteEntity, 500, totalPageCount);
+                    batchProcessingLemmaAndIndex(siteEntity, 300, totalPageCount);
                 }
             }
         } catch (Exception e) {
@@ -64,7 +64,7 @@ public class PageProcessServiceImpl implements PageProcessService {
         List<SiteEntity> siteEntityList = siteRepository.findAll();
         for (SiteEntity site : siteEntityList){
             int totalPageCount = pageRepository.countPagesBySiteId(site.getId());
-            batchProcessingLemmaAndIndex(site, 500, totalPageCount);
+            batchProcessingLemmaAndIndex(site, 300, totalPageCount);
         }
     }
 
@@ -72,9 +72,12 @@ public class PageProcessServiceImpl implements PageProcessService {
         log.info("Количество страниц {} для обработки сайта {}", totalPageCount, siteEntity.getUrl());
         int offset = 0;
         while (offset < totalPageCount) {
+            long start = System.currentTimeMillis();
             List<PageEntity> pageBatch = pageRepository.findPagesBySiteIdWithPagination(siteEntity.getId(), batchSize, offset);
             log.info("Обработка батча с {} до {}", offset, offset + pageBatch.size());
             lemmaProcessService.parsingAndSaveContent(siteEntity, pageBatch);
+            long finish = System.currentTimeMillis();
+            log.info("Время обработки бача {} секунд", (float) ((finish - start) / 1000));
             offset += batchSize;
         }
     }

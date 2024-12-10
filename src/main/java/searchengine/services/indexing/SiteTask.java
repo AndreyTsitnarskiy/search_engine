@@ -17,7 +17,7 @@ import java.util.concurrent.RecursiveAction;
 
 @Slf4j
 @RequiredArgsConstructor
-public class SiteIndexingTask extends RecursiveAction {
+public class SiteTask extends RecursiveAction {
     private final String url;
     private final SiteEntity siteEntity;
     private final PropertiesProject property;
@@ -33,7 +33,7 @@ public class SiteIndexingTask extends RecursiveAction {
             return;
         }
 
-        Set<SiteIndexingTask> subTasks = new HashSet<>();
+        Set<SiteTask> subTasks = new HashSet<>();
 
         try {
             //log.info("START PAGE: " + url);
@@ -52,7 +52,7 @@ public class SiteIndexingTask extends RecursiveAction {
                 String subUrl = link.absUrl("href");
                 if (subUrl.startsWith(UtilCheck.reworkUrl(siteEntity.getUrl()))
                         && !pageProcessService.isUrlVisited(subUrl)) {
-                    SiteIndexingTask subTask = new SiteIndexingTask(subUrl, siteEntity, property, pageProcessService);
+                    SiteTask subTask = new SiteTask(subUrl, siteEntity, property, pageProcessService);
                     subTasks.add(subTask);
                     subTask.fork();
                 }
@@ -64,6 +64,6 @@ public class SiteIndexingTask extends RecursiveAction {
             pageProcessService.updateStatusSiteFailed(siteEntity, e.getMessage());
             return;
         }
-        subTasks.forEach(SiteIndexingTask::join);
+        subTasks.forEach(SiteTask::join);
     }
 }

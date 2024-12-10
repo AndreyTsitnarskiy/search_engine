@@ -2,8 +2,7 @@ package searchengine.services.indexing;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.entity.IndexEntity;
@@ -13,12 +12,11 @@ import searchengine.entity.SiteEntity;
 import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
 import searchengine.services.indexing.interfaces.LemmaProcessService;
-import searchengine.utility.LemmaExecute;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -31,54 +29,73 @@ public class LemmaProcessServiceImpl implements LemmaProcessService {
 
     @Override
     public void parsingAndSaveContent(SiteEntity siteEntity, List<PageEntity> listPages) {
-        for (PageEntity page : listPages) {
-            Map<String, Integer> lemmasInOnePage = extractionLemmaCount(page);
-            processPageLemmas(siteEntity, page, lemmasInOnePage);
+        ForkJoinPool forkJoinPool = new ForkJoinPool();
+        ConcurrentHashMap<PageEntity, Map<String, Integer>> globalPages = new ConcurrentHashMap<>();
+
+        forkJoinPool.invoke(new LemmaTask(listPages, globalPages));
+        forkJoinPool.shutdown();
+        processLemmasInIndexes(globalPages, siteEntity);
+        globalPages.clear();
+    }
+
+    private void processLemmasInIndexes(ConcurrentHashMap<PageEntity, Map<String, Integer>> globalPages, SiteEntity siteEntity) {
+        List<IndexEntity> indexEntities = new ArrayList<>();
+
+        List<String> lemmaInBatchPages = globalPages.values().stream()
+                .flatMap(lemmasMap -> lemmasMap.keySet().stream())
+                .distinct()
+                .toList();
+        Map<String, LemmaEntity> lemmaMapFromDataBase = lemmaRepository.getExistsLemmas(lemmaInBatchPages, siteEntity.getId())
+                .stream()
+                .collect(Collectors.toMap(LemmaEntity::getLemma, lemma -> lemma));
+
+        for (Map.Entry<PageEntity, Map<String, Integer>> entry : globalPages.entrySet()) {
+            for (Map.Entry<String, Integer> lemmas : entry.getValue().entrySet()) {
+                String lemmaKey = lemmas.getKey();
+
+                LemmaEntity lemmaEntity;
+
+                if(lemmaMapFromDataBase.containsKey(lemmaKey)){
+                    lemmaEntity = lemmaMapFromDataBase.get(lemmaKey);
+                    lemmaEntity.setFrequency(lemmaEntity.getFrequency() + 1);
+                    lemmaMapFromDataBase.put(lemmaKey, lemmaEntity);
+                } else {
+                    lemmaEntity = new LemmaEntity();
+                    lemmaEntity.setSite(siteEntity);
+                    lemmaEntity.setFrequency(1);
+                    lemmaEntity.setLemma(lemmaKey);
+                    lemmaMapFromDataBase.put(lemmaKey, lemmaEntity);
+                }
+                IndexEntity index = new IndexEntity();
+                index.setPage(entry.getKey());
+                index.setRank(lemmas.getValue());
+                index.setLemma(lemmaEntity);
+                indexEntities.add(index);
+            }
+        }
+        batchSaveAllLemmas(new ArrayList<>(lemmaMapFromDataBase.values()));
+        lemmaMapFromDataBase.clear();
+        batchSaveAllIndexes(indexEntities);
+        indexEntities.clear();
+    }
+
+    @Transactional
+    private void batchSaveAllLemmas(List<LemmaEntity> lemmaEntityInBatch) {
+        int batchSize = 1000;
+        for (int i = 0; i < lemmaEntityInBatch.size(); i += batchSize) {
+            int end = Math.min(i + batchSize, lemmaEntityInBatch.size());
+            List<LemmaEntity> tempBatch = lemmaEntityInBatch.subList(i, end);
+            lemmaRepository.saveAll(tempBatch);
         }
     }
 
     @Transactional
-    private void processPageLemmas(SiteEntity siteEntity, PageEntity pageEntity, Map<String, Integer> lemmasInOnePage) {
-        List<LemmaEntity> existingLemmas = lemmaRepository
-                .getExistsLemmas(new ArrayList<>(lemmasInOnePage.keySet()), siteEntity.getId());
-
-        Map<String, LemmaEntity> existingLemmaMap = existingLemmas.stream()
-                .collect(Collectors.toMap(LemmaEntity::getLemma, lemma -> lemma));
-
-        List<LemmaEntity> oldLemmas = new ArrayList<>();
-        List<LemmaEntity> newLemmas = new ArrayList<>();
-        List<IndexEntity> indices = new ArrayList<>();
-
-        for (Map.Entry<String, Integer> entry : lemmasInOnePage.entrySet()) {
-            String lemmaText = entry.getKey();
-            int count = entry.getValue();
-
-            LemmaEntity lemmaEntity = existingLemmaMap.get(lemmaText);
-            if (lemmaEntity != null) {
-                lemmaEntity.setFrequency(lemmaEntity.getFrequency() + 1);
-                oldLemmas.add(lemmaEntity);
-            } else {
-                lemmaEntity = new LemmaEntity();
-                lemmaEntity.setLemma(lemmaText);
-                lemmaEntity.setFrequency(1);
-                lemmaEntity.setSite(siteEntity);
-                newLemmas.add(lemmaEntity);
-            }
-
-            indices.add(new IndexEntity(pageEntity, lemmaEntity, count));
+    private void batchSaveAllIndexes(List<IndexEntity> indexEntitiesInBatch) {
+        int batchSize = 1000;
+        for (int i = 0; i < indexEntitiesInBatch.size(); i += batchSize) {
+            int end = Math.min(i + batchSize, indexEntitiesInBatch.size());
+            List<IndexEntity> tempBatch = indexEntitiesInBatch.subList(i, end);
+            indexRepository.saveAll(tempBatch);
         }
-        lemmaRepository.saveAll(oldLemmas);
-        if (!newLemmas.isEmpty()) {
-            lemmaRepository.saveAll(newLemmas);
-        }
-        if (!indices.isEmpty()) {
-            indexRepository.saveAll(indices);
-        }
-    }
-
-    private HashMap<String, Integer> extractionLemmaCount(PageEntity pageEntity) {
-        Document document = Jsoup.parse(pageEntity.getContent());
-        String text = document.body().text();
-        return LemmaExecute.getLemmaMap(text);
     }
 }
