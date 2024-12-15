@@ -7,5 +7,4 @@ import searchengine.entity.IndexEntity;
 @Repository
 public interface IndexRepository extends JpaRepository<IndexEntity, Integer> {
 
-
 }

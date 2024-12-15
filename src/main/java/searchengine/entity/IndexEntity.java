@@ -20,12 +20,11 @@ public class IndexEntity {
     private PageEntity page;
 
     @NonNull
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.PERSIST)
     @JoinColumn(name = "lemma_id", nullable = false)
     private LemmaEntity lemma;
 
     @NonNull
     @Column(nullable = false, name = "rank")
     private float rank;
-
 }

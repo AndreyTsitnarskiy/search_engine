@@ -30,7 +30,7 @@ public class LemmaEntity {
     @Column(nullable = false)
     private Integer frequency;
 
-    @OneToMany(mappedBy = "lemma", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "lemma", cascade = CascadeType.PERSIST, fetch = FetchType.LAZY)
     private Set<IndexEntity> indices = new HashSet<>();
 
     @Override
@@ -38,11 +38,12 @@ public class LemmaEntity {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         LemmaEntity that = (LemmaEntity) o;
-        return Objects.equals(site, that.site) && Objects.equals(lemma, that.lemma);
+        return Objects.equals(lemma, that.lemma) &&
+                Objects.equals(site, that.site);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(site, lemma);
+        return Objects.hash(lemma, site);
     }
 }

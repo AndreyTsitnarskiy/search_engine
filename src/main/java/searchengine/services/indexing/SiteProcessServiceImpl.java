@@ -24,6 +24,7 @@ public class SiteProcessServiceImpl implements SiteProcessService {
     private final SiteRepository siteRepository;
     private final PageProcessService pageProcessService;
 
+
     @Transactional
     public void parseSites(List<SiteEntity> siteUrls) {
         List<CompletableFuture<Void>> futures = siteUrls.stream()
