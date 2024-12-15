@@ -1,8 +1,9 @@
 package searchengine.services.indexing;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.entity.IndexEntity;
@@ -14,9 +15,7 @@ import searchengine.repository.LemmaRepository;
 import searchengine.services.indexing.interfaces.LemmaProcessService;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -27,18 +26,22 @@ public class LemmaProcessServiceImpl implements LemmaProcessService {
     private final LemmaRepository lemmaRepository;
     private final IndexRepository indexRepository;
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     @Override
     public void parsingAndSaveContent(SiteEntity siteEntity, List<PageEntity> listPages) {
         ForkJoinPool forkJoinPool = new ForkJoinPool();
-        ConcurrentHashMap<PageEntity, Map<String, Integer>> globalPages = new ConcurrentHashMap<>();
+        HashMap<PageEntity, Map<String, Integer>> globalPages = new HashMap<>();
 
         forkJoinPool.invoke(new LemmaTask(listPages, globalPages));
         forkJoinPool.shutdown();
         processLemmasInIndexes(globalPages, siteEntity);
         globalPages.clear();
+        entityManager.clear();
     }
 
-    private void processLemmasInIndexes(ConcurrentHashMap<PageEntity, Map<String, Integer>> globalPages, SiteEntity siteEntity) {
+    private void processLemmasInIndexes(HashMap<PageEntity, Map<String, Integer>> globalPages, SiteEntity siteEntity) {
         List<IndexEntity> indexEntities = new ArrayList<>();
 
         List<String> lemmaInBatchPages = globalPages.values().stream()

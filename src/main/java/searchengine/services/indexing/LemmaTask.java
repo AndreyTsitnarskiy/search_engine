@@ -8,9 +8,10 @@ import org.springframework.transaction.annotation.Transactional;
 import searchengine.entity.PageEntity;
 import searchengine.utility.LemmaExecute;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RecursiveAction;
 
 @Slf4j
@@ -19,7 +20,7 @@ public class LemmaTask extends RecursiveAction {
     private static final int THRESHOLD = 20;
 
     private final List<PageEntity> pages;
-    private final ConcurrentHashMap<PageEntity, Map<String, Integer>> global;
+    private final HashMap<PageEntity, Map<String, Integer>> global;
 
     @Override
     protected void compute() {
@@ -46,9 +47,17 @@ public class LemmaTask extends RecursiveAction {
     }
 
     private Map<String, Integer> extractionLemmaCount(PageEntity pageEntity) {
-        Document document = Jsoup.parse(pageEntity.getContent());
-        String text = document.body().text();
-        document = null;
-        return LemmaExecute.getLemmaMap(text);
+        try {
+            if (pageEntity.getContent() == null || pageEntity.getContent().isEmpty()) {
+                log.warn("Страница с id {} содержит пустой контент", pageEntity.getId());
+                return Collections.emptyMap();
+            }
+            Document document = Jsoup.parse(pageEntity.getContent());
+            String text = document.body().text();
+            return LemmaExecute.getLemmaMap(text);
+        } catch (Exception e) {
+            log.error("Ошибка при извлечении лемм для страницы с id {}: {}", pageEntity.getId(), e.getMessage());
+            return Collections.emptyMap();
+        }
     }
 }
