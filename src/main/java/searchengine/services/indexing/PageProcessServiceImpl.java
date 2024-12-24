@@ -49,10 +49,7 @@ public class PageProcessServiceImpl implements PageProcessService {
             if (isSiteProcessingCompleted(siteEntity)) {
                 shutdownSiteForkJoinPool(siteEntity.getId());
                 log.info("Завершены все потоки для сайта: " + siteEntity.getUrl());
-                int totalPageCount = pageRepository.countPagesBySiteId(siteEntity.getId());
-                if(totalPageCount != 0) {
-                    batchProcessingLemmaAndIndex(siteEntity, 100, totalPageCount);
-                }
+                batchProcessingLemmaAndIndex(siteEntity);
             }
         } catch (Exception e) {
             log.error("ERROR " + e.getMessage());
@@ -60,29 +57,19 @@ public class PageProcessServiceImpl implements PageProcessService {
     }
 
 
-    @Override
-    public void tempMethodTests(){
-        List<SiteEntity> siteEntityList = siteRepository.findAll();
-        for (SiteEntity site : siteEntityList){
-            int totalPageCount = pageRepository.countPagesBySiteId(site.getId());
-            batchProcessingLemmaAndIndex(site, 100, totalPageCount);
-        }
-    }
-
-    private void batchProcessingLemmaAndIndex(SiteEntity siteEntity, int batchSize, int totalPageCount){
-        Runtime runtime = Runtime.getRuntime();
-        log.info("Количество страниц {} для обработки сайта {}", totalPageCount, siteEntity.getUrl());
+    private void batchProcessingLemmaAndIndex(SiteEntity siteEntity){
+        log.info("ЗАПУЩЕН парсинг лем страниц сайта {}", siteEntity.getUrl());
+        int totalPageCount = pageRepository.countPagesBySiteId(siteEntity.getId());
+        int batchSize = 100;
         int offset = 0;
-        while (offset < totalPageCount) {
-            long start = System.currentTimeMillis();
-            List<PageEntity> pageBatch = pageRepository.findPagesBySiteIdWithPagination(siteEntity.getId(), batchSize, offset);
-            log.info("Обработка батча с {} до {}", offset, offset + pageBatch.size());
-            lemmaProcessService.parsingAndSaveContent(siteEntity, pageBatch);
-            long finish = System.currentTimeMillis();
-            log.info("Время обработки бача {} секунд", (float) ((finish - start) / 1000));
-            log.info("Свободная память: {} MB", runtime.freeMemory() / 1024 / 1024);
-            offset += batchSize;
+        if (totalPageCount != 0) {
+            while (offset < totalPageCount) {
+                List<PageEntity> pageBatch = pageRepository.findPagesBySiteIdWithPagination(siteEntity.getId(), batchSize, offset);
+                lemmaProcessService.parsingAndSaveContent(siteEntity, pageBatch);
+                offset += batchSize;
+            }
         }
+        log.info("ЗАВЕРШЕН парсинг лем страниц сайта {}", siteEntity.getUrl());
     }
 
     @Override
@@ -160,5 +147,21 @@ public class PageProcessServiceImpl implements PageProcessService {
 
     public boolean isSiteProcessingCompleted(SiteEntity siteEntity) {
         return visitedUrls.stream().noneMatch(url -> url.startsWith(siteEntity.getUrl()));
+    }
+
+    @Override
+    @Transactional
+    public void deleteAllSiteAndPages(){
+        lemmaProcessService.deleteAllLemmasAndIndexes();
+        pageRepository.deleteAll();
+        siteRepository.deleteAll();
+    }
+
+    public void shutdownAllPoolsImmediately() {
+        sitePools.values().forEach(pool -> {
+            pool.shutdownNow();
+            log.info("Выполнена резкая остановка потоков без ожидания завершения текущих задач");
+        });
+        sitePools.clear();
     }
 }

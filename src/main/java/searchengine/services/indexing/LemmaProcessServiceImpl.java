@@ -82,6 +82,13 @@ public class LemmaProcessServiceImpl implements LemmaProcessService {
         indexEntities.clear();
     }
 
+    @Override
+    @Transactional
+    public void deleteAllLemmasAndIndexes(){
+        indexRepository.deleteAll();
+        lemmaRepository.deleteAll();
+    }
+
     @Transactional
     private void batchSaveAllLemmas(List<LemmaEntity> lemmaEntityInBatch) {
         int batchSize = 1000;

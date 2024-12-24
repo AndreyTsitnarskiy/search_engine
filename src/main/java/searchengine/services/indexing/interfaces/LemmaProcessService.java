@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface LemmaProcessService {
     void parsingAndSaveContent(SiteEntity siteEntity, List<PageEntity> listPages);
+    void deleteAllLemmasAndIndexes();
 }
