@@ -18,6 +18,7 @@ public interface LemmaRepository extends JpaRepository<LemmaEntity, Integer> {
     @Query("SELECT l FROM LemmaEntity l WHERE l.lemma IN :lemmas AND l.site.id = :siteId")
     List<LemmaEntity> getExistsLemmas(@Param("lemmas") List<String> lemmas, @Param("siteId") int siteId);
 
-    @Query("SELECT l FROM LemmaEntity l WHERE l.lemma = :lemma AND l.site.id = :siteId")
-    LemmaEntity findByLemmaAndSiteId(@Param("lemma") String lemma, @Param("siteId") int siteId);
+    @Modifying
+    @Query(value = "DELETE FROM sites_parsing.lemmas", nativeQuery = true)
+    void deleteAllLemmas();
 }

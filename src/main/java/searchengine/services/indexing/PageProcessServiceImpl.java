@@ -25,7 +25,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -42,8 +41,9 @@ public class PageProcessServiceImpl implements PageProcessService {
 
     @Override
     public void parsePage(String pageUrl, Document document, SiteEntity siteEntity) {
+        int poolSize = UtilCheck.calculateForkJoinPoolSize(sitesList.getSites().size());
         ForkJoinPool forkJoinPool = sitePools.computeIfAbsent(siteEntity.getId(),
-                id -> new ForkJoinPool(UtilCheck.calculateForkJoinPoolSize(sitesList.getSites().size())));
+                id -> new ForkJoinPool(poolSize));
         try {
             forkJoinPool.invoke(new SiteTask(pageUrl, siteEntity, projectParameters, this));
             if (isSiteProcessingCompleted(siteEntity)) {
@@ -56,8 +56,9 @@ public class PageProcessServiceImpl implements PageProcessService {
         }
     }
 
-
-    private void batchProcessingLemmaAndIndex(SiteEntity siteEntity){
+    @Transactional
+    @Override
+    public void batchProcessingLemmaAndIndex(SiteEntity siteEntity){
         log.info("ЗАПУЩЕН парсинг лем страниц сайта {}", siteEntity.getUrl());
         int totalPageCount = pageRepository.countPagesBySiteId(siteEntity.getId());
         int batchSize = 100;
@@ -138,12 +139,35 @@ public class PageProcessServiceImpl implements PageProcessService {
         }
     }
 
-    @Override
+/*    @Override
     public void clearSiteState(int siteId) {
         siteErrorMap.remove(siteId);
         visitedUrls.removeIf(url -> url.startsWith(siteRepository.findById(siteId).get().getUrl()));
-        System.gc();
-    }
+        //System.gc();
+    }*/
+
+/*    @Override
+    public void clearSiteStateInBatch(int siteId) {
+        long start = System.currentTimeMillis();
+        log.info("Начинаем удаление пройденных сайтов, размер visit urls {}", visitedUrls.size());
+
+        String siteUrl = siteRepository.findById(siteId).get().getUrl();
+        int batchSize = 100;
+        int offset = 0;
+        List<String> urlsToRemove = visitedUrls.stream()
+                .filter(url -> url.startsWith(siteUrl))
+                .collect(Collectors.toList());
+
+        while (offset < urlsToRemove.size()) {
+            int end = Math.min(offset + batchSize, urlsToRemove.size());
+            visitedUrls.removeAll(urlsToRemove.subList(offset, end));
+            offset = end;
+        }
+
+        log.info("Очистка завершена, удалено {} URL-адресов, затраченное время: {} сек, для сайта {}",
+                offset, (System.currentTimeMillis() - start) / 1000, siteUrl);
+        log.info("Количество visitUrls после удаления {} сайта {}", siteUrl, visitedUrls.size());
+    }*/
 
     public boolean isSiteProcessingCompleted(SiteEntity siteEntity) {
         return visitedUrls.stream().noneMatch(url -> url.startsWith(siteEntity.getUrl()));
@@ -153,8 +177,8 @@ public class PageProcessServiceImpl implements PageProcessService {
     @Transactional
     public void deleteAllSiteAndPages(){
         lemmaProcessService.deleteAllLemmasAndIndexes();
-        pageRepository.deleteAll();
-        siteRepository.deleteAll();
+        pageRepository.deleteAllPages();
+        siteRepository.deleteAllSites();
     }
 
     public void shutdownAllPoolsImmediately() {

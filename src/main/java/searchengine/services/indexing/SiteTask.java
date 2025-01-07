@@ -11,6 +11,7 @@ import searchengine.utility.ConnectionUtil;
 import searchengine.utility.PropertiesProject;
 import searchengine.utility.UtilCheck;
 
+import java.rmi.ConnectException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.RecursiveAction;
@@ -57,8 +58,10 @@ public class SiteTask extends RecursiveAction {
                     subTask.fork();
                 }
             }
+        } catch (ConnectException ex) {
+            log.warn("Ошибка подключения");
         } catch (Exception e) {
-            log.error("ERROR processing URL: " + url, e);
+            //log.error("ERROR processing URL: " + url, e);
             int code = ConnectionUtil.getStatusCode(url);
             pageProcessService.updateStatusPage(siteEntity, url, code != 0 ? code : 500);
             pageProcessService.updateStatusSiteFailed(siteEntity, e.getMessage());

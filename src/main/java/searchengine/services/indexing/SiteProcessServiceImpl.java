@@ -47,8 +47,9 @@ public class SiteProcessServiceImpl implements SiteProcessService {
             if(siteEntity.getStatus() != Status.FAILED){
                 siteEntity.setStatus(Status.INDEXED);
                 siteRepository.save(siteEntity);
+                pageProcessService.batchProcessingLemmaAndIndex(siteEntity);
             }
-            pageProcessService.clearSiteState(siteEntity.getId());
+            //pageProcessService.clearSiteStateInBatch(siteEntity.getId());
         } catch (Exception e) {
             log.error("Error indexing site {}", siteEntity.getUrl(), e);
             siteEntity.setStatus(Status.FAILED);

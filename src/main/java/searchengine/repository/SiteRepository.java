@@ -29,4 +29,8 @@ public interface SiteRepository extends JpaRepository<SiteEntity, Integer> {
                                       @Param("statusTime") LocalDateTime statusTime,
                                       @Param("lastError") String lastError);
 
+    @Modifying
+    @Query(value = "DELETE FROM sites_parsing.site", nativeQuery = true)
+    void deleteAllSites();
+
 }
