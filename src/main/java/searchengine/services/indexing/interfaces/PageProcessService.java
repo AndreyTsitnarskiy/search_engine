@@ -6,9 +6,13 @@ import searchengine.entity.SiteEntity;
 public interface PageProcessService {
     void parsePage(String pageUrl, Document document, SiteEntity siteEntity);
 
-    void tempMethodTests();
-
     void initializeSite(int id);
 
-    void clearSiteState(int id);
+    //void clearSiteState(int id);
+
+    //void clearSiteStateInBatch(int siteId);
+
+    void batchProcessingLemmaAndIndex(SiteEntity siteEntity);
+
+    void deleteAllSiteAndPages();
 }

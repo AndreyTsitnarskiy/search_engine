@@ -29,12 +29,12 @@ public class IndexingSitesImpl implements IndexingSitesService {
 
     @Override
     public ResponseEntity<ApiResponse> startIndexing() {
+        pageProcessService.deleteAllSiteAndPages();
         if(isIndexingStart){
             return ResponseEntity.ok(new ApiResponse(false, "Индексация не запущена"));
         } else {
             isIndexingStart = true;
-            //new Thread(this::indexingAllSites).start(); основной запуск потоков и парсинг
-            pageProcessService.tempMethodTests();
+            new Thread(this::indexingAllSites).start();
         }
         return ResponseEntity.ok(new ApiResponse(true, "Indexing started"));
     }

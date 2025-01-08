@@ -29,6 +29,7 @@ public class LemmaProcessServiceImpl implements LemmaProcessService {
     @PersistenceContext
     private EntityManager entityManager;
 
+    @Transactional
     @Override
     public void parsingAndSaveContent(SiteEntity siteEntity, List<PageEntity> listPages) {
         ForkJoinPool forkJoinPool = new ForkJoinPool();
@@ -80,6 +81,13 @@ public class LemmaProcessServiceImpl implements LemmaProcessService {
         lemmaMapFromDataBase.clear();
         batchSaveAllIndexes(indexEntities);
         indexEntities.clear();
+    }
+
+    @Override
+    @Transactional
+    public void deleteAllLemmasAndIndexes(){
+        indexRepository.deleteAllIndexes();
+        lemmaRepository.deleteAllLemmas();
     }
 
     @Transactional
