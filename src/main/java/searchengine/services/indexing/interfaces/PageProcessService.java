@@ -8,9 +8,7 @@ public interface PageProcessService {
 
     void initializeSite(int id);
 
-    //void clearSiteState(int id);
-
-    //void clearSiteStateInBatch(int siteId);
+    void clearSiteState(int id);
 
     void batchProcessingLemmaAndIndex(SiteEntity siteEntity);
 

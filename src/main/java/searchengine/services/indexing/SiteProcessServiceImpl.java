@@ -49,7 +49,7 @@ public class SiteProcessServiceImpl implements SiteProcessService {
                 siteRepository.save(siteEntity);
                 pageProcessService.batchProcessingLemmaAndIndex(siteEntity);
             }
-            //pageProcessService.clearSiteStateInBatch(siteEntity.getId());
+            pageProcessService.clearSiteState(siteEntity.getId());
         } catch (Exception e) {
             log.error("Error indexing site {}", siteEntity.getUrl(), e);
             siteEntity.setStatus(Status.FAILED);
