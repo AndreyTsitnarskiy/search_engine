@@ -24,8 +24,8 @@ spring:
   datasource:
     #url: jdbc:postgresql://host.docker.internal:5432/search_engine_db
     url: jdbc:postgresql://localhost:5432/search_engine_db
-    username: se_user
-    password: app$diplomU$er
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
     #password: testPass
     driver-class-name: org.postgresql.Driver
     hikari:
