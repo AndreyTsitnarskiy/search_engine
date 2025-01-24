@@ -31,8 +31,7 @@ public class LemmaProcessServiceImpl implements LemmaProcessService {
 
     @Transactional
     @Override
-    public void parsingAndSaveContent(SiteEntity siteEntity, List<PageEntity> listPages) {
-        ForkJoinPool forkJoinPool = new ForkJoinPool();
+    public void parsingAndSaveContent(SiteEntity siteEntity, List<PageEntity> listPages, ForkJoinPool forkJoinPool) {
         HashMap<PageEntity, Map<String, Integer>> globalPages = new HashMap<>();
 
         forkJoinPool.invoke(new LemmaTask(listPages, globalPages));

@@ -13,16 +13,20 @@ import searchengine.utility.UtilCheck;
 
 import java.rmi.ConnectException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.RecursiveAction;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
 public class SiteTask extends RecursiveAction {
+
     private final String url;
     private final SiteEntity siteEntity;
     private final PropertiesProject property;
     private final PageProcessServiceImpl pageProcessService;
+    private final StatusManagerImpl statusManager;
 
     @Override
     protected void compute() {
@@ -34,39 +38,41 @@ public class SiteTask extends RecursiveAction {
             return;
         }
 
-        Set<SiteTask> subTasks = new HashSet<>();
-
         try {
-            //log.info("START PAGE: " + url);
+            log.info("START PAGE: " + url);
             Connection connection = ConnectionUtil.getConnection(url, property.getReferrer(), property.getUserAgent());
             Document doc = connection.get();
 
             String uri = url.substring(siteEntity.getUrl().length());
             pageProcessService.processPage(uri, doc, siteEntity);
 
-            if(pageProcessService.checkConditionStatusSite(siteEntity)){
-                pageProcessService.updateStatusSiteIndexing(siteEntity);
+            if(statusManager.checkConditionStatusSite(siteEntity)){
+                statusManager.updateStatusSiteIndexing(siteEntity);
             }
 
             Elements links = doc.select("a[href]");
-            for (Element link : links) {
-                String subUrl = link.absUrl("href");
-                if (subUrl.startsWith(UtilCheck.reworkUrl(siteEntity.getUrl()))
-                        && !pageProcessService.isUrlVisited(subUrl)) {
-                    SiteTask subTask = new SiteTask(subUrl, siteEntity, property, pageProcessService);
-                    subTasks.add(subTask);
-                    subTask.fork();
-                }
-            }
+            Set<SiteTask> subTasks = links.stream()
+                    .map(link -> link.absUrl("href"))
+                    .filter(subUrl -> {
+                        boolean isNew = pageProcessService.isUrlVisited(subUrl);
+                        return !isNew && subUrl.startsWith(UtilCheck.reworkUrl(siteEntity.getUrl())) &&
+                                !subUrl.equals(siteEntity.getUrl());
+                    })
+                    .map(subUrl -> new SiteTask(subUrl, siteEntity, property, pageProcessService, statusManager))
+                    .collect(Collectors.toSet());
+            invokeAll(subTasks);
+
         } catch (ConnectException ex) {
             log.warn("Ошибка подключения");
         } catch (Exception e) {
-            //log.error("ERROR processing URL: " + url, e);
-            int code = ConnectionUtil.getStatusCode(url);
-            pageProcessService.updateStatusPage(siteEntity, url, code != 0 ? code : 500);
-            pageProcessService.updateStatusSiteFailed(siteEntity, e.getMessage());
-            return;
+            handleTaskError(url, e);
         }
-        subTasks.forEach(SiteTask::join);
+    }
+
+    private void handleTaskError(String url, Exception e) {
+        log.error("Failed processing URL: {}", url, e);
+        int code = ConnectionUtil.getStatusCode(url);
+        statusManager.updateStatusPage(siteEntity, url, code != 0 ? code : 500);
+        statusManager.updateStatusSiteFailed(siteEntity, e.getMessage());
     }
 }
