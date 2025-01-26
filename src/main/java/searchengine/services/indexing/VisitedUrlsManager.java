@@ -17,8 +17,4 @@ public class VisitedUrlsManager {
     public void clearUrls(String siteUrl) {
         visitedUrls.removeIf(url -> url.startsWith(siteUrl));
     }
-
-    public boolean isProcessingCompleted(String siteUrl) {
-        return visitedUrls.stream().noneMatch(url -> url.startsWith(siteUrl));
-    }
 }
