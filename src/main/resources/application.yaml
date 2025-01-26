@@ -9,8 +9,8 @@ indexing-settings:
 #      name: Бренд ЧАРУТТИ
 #    - url: https://opt-opt-opt.ru/
 #      name: ТриОпт
-    - url: https://dombulgakova.ru/
-      name: PДом Булгакова
+#    - url: https://dombulgakova.ru/
+#      name: PДом Булгакова
     - url: https://www.atomstroy.net/
       name: Атом строй комплекс
 

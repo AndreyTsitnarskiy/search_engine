@@ -30,7 +30,7 @@ public interface SiteRepository extends JpaRepository<SiteEntity, Integer> {
                                       @Param("lastError") String lastError);
 
     @Modifying
-    @Query(value = "DELETE FROM sites_parsing.site", nativeQuery = true)
-    void deleteAllSites();
+    @Query(value = "TRUNCATE TABLE sites_parsing.site RESTART IDENTITY CASCADE", nativeQuery = true)
+    void truncateAllSites();
 
 }
