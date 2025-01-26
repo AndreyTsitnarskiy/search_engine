@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import searchengine.entity.PageEntity;
 
 import java.util.List;
@@ -19,6 +20,6 @@ public interface PageRepository extends JpaRepository<PageEntity, Integer> {
     List<PageEntity> findPagesBySiteIdWithPagination(@Param("siteId") int siteId, @Param("batchSize") int batchSize, @Param("offset") int offset);
 
     @Modifying
-    @Query(value = "DELETE FROM sites_parsing.page", nativeQuery = true)
-    void deleteAllPages();
+    @Query(value = "TRUNCATE TABLE sites_parsing.page RESTART IDENTITY CASCADE", nativeQuery = true)
+    void truncateAllPages();
 }

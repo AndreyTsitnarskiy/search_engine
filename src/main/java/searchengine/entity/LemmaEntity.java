@@ -30,7 +30,7 @@ public class LemmaEntity {
     @Column(nullable = false)
     private Integer frequency;
 
-    @OneToMany(mappedBy = "lemma", cascade = CascadeType.PERSIST, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "lemma", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Set<IndexEntity> indices = new HashSet<>();
 
     @Override

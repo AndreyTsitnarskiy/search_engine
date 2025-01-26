@@ -20,7 +20,7 @@ public class IndexEntity {
     private PageEntity page;
 
     @NonNull
-    @ManyToOne(cascade = CascadeType.PERSIST)
+    @ManyToOne(cascade = CascadeType.MERGE)
     @JoinColumn(name = "lemma_id", nullable = false)
     private LemmaEntity lemma;
 

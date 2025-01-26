@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import searchengine.config.IndexingStateManager;
 import searchengine.dto.response.ApiResponse;
 import searchengine.services.indexing.interfaces.IndexingSitesService;
 import searchengine.services.indexing.interfaces.PageProcessService;
@@ -12,19 +13,18 @@ import searchengine.services.indexing.interfaces.PageProcessService;
 @Service
 @RequiredArgsConstructor
 public class IndexingSitesImpl implements IndexingSitesService {
-    private volatile boolean isIndexingStart = false;
+
     private final PageProcessService pageProcessService;
+    private final IndexingStateManager indexingStateManager;
 
     @Override
     public ResponseEntity<ApiResponse> startIndexing() {
-        //pageProcessService.deleteAllSiteAndPages();
-        if(isIndexingStart){
-            return ResponseEntity.ok(new ApiResponse(false, "Индексация не запущена"));
-        } else {
-            isIndexingStart = true;
-            pageProcessService.indexingAllSites();
+        if (!indexingStateManager.startIndexing()) {
+            return ResponseEntity.ok(ApiResponse.failure("Индексация уже запущена"));
         }
-        return ResponseEntity.ok(new ApiResponse(true, "Indexing started"));
+
+        pageProcessService.indexingAllSites();
+        return ResponseEntity.ok(ApiResponse.success("Indexing started"));
     }
 
     @Override
@@ -36,7 +36,7 @@ public class IndexingSitesImpl implements IndexingSitesService {
 
     @Override
     public ResponseEntity<ApiResponse> stopIndexing() {
-
-        return ResponseEntity.ok(new ApiResponse(true, "Indexing stopped"));
+        indexingStateManager.stopIndexing();
+        return ResponseEntity.ok(ApiResponse.success("Indexing stopped"));
     }
 }

@@ -33,17 +33,6 @@ public class UtilCheck {
     public static boolean containsSiteName(String url, String siteName) {
         String cleanedUrl = reworkUrl(url);
         String cleanedSiteName = reworkUrl(siteName);
-
         return cleanedUrl.startsWith(cleanedSiteName);
-    }
-
-    public static int calculateForkJoinPoolSize(int numberOfSites) {
-        int availableProcessors = Runtime.getRuntime().availableProcessors();
-        log.info("Количество логических процессоров: " + availableProcessors);
-        int maxThreads = Math.max(availableProcessors - 2, 1);
-        int threadsPerSite = maxThreads / numberOfSites;
-        log.info("Потоки на сайт после расчета от количества сайтов " + threadsPerSite);
-
-        return Math.max(threadsPerSite, 1);
     }
 }
