@@ -64,6 +64,11 @@ public class PageProcessServiceImpl implements PageProcessService {
         log.info("Реиндекс URL: {} успешен", url);
     }
 
+    @Override
+    public void stopIndexing() {
+        forkJoinPoolManager.shutdown();
+    }
+
     private void parseSites(List<SiteEntity> sites) {
         List<SiteTaskRecursive> siteTasks = new ArrayList<>();
 

@@ -4,4 +4,6 @@ public interface PageProcessService {
     void indexingAllSites();
 
     void reindexSinglePage(String path);
+
+    void stopIndexing();
 }

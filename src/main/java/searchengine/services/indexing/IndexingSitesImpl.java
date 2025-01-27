@@ -20,28 +20,47 @@ public class IndexingSitesImpl implements IndexingSitesService {
     @Override
     public ResponseEntity<ApiResponse> startIndexing() {
         if (!indexingStateManager.startIndexing()) {
+            log.info("Индексация уже запущена");
             return ResponseEntity.ok(ApiResponse.failure("Индексация уже запущена"));
         }
 
-        pageProcessService.indexingAllSites();
-        return ResponseEntity.ok(ApiResponse.success("Indexing started"));
+        try {
+            pageProcessService.indexingAllSites();
+            log.info("Индексация всех сайтов запущена");
+            return ResponseEntity.ok(ApiResponse.success("Индексация начата"));
+        } catch (Exception e) {
+            log.error("Ошибка при запуске индексации: {}", e.getMessage());
+            indexingStateManager.stopIndexing();
+            return ResponseEntity.ok(ApiResponse.failure("Ошибка при запуске индексации"));
+        }
     }
 
     @Override
     public ResponseEntity<ApiResponse> indexPage(String path) {
-        log.info("INDEX PAGE: {}", path);
+        if (!indexingStateManager.isIndexing()) {
+            log.warn("Индексация не запущена, реиндексация отдельной страницы невозможна");
+            return ResponseEntity.ok(ApiResponse.failure("Индексация не запущена"));
+        }
+
+        log.info("Реиндексация страницы: {}", path);
         try {
             pageProcessService.reindexSinglePage(path);
-            return ResponseEntity.ok(ApiResponse.success("Page reindexed successfully"));
+            return ResponseEntity.ok(ApiResponse.success("Реиндексация страницы завершена"));
         } catch (Exception e) {
-            log.error("Error during reindexing page: {}", e.getMessage());
-            return ResponseEntity.ok(ApiResponse.failure("Failed to reindex page"));
+            log.error("Ошибка при реиндексации страницы: {}", e.getMessage());
+            return ResponseEntity.ok(ApiResponse.failure("Ошибка при реиндексации страницы"));
         }
     }
 
     @Override
     public ResponseEntity<ApiResponse> stopIndexing() {
+        if (!indexingStateManager.isIndexing()) {
+            log.warn("Индексация не запущена, остановка невозможна");
+            return ResponseEntity.ok(ApiResponse.failure("Индексация не запущена"));
+        }
+        pageProcessService.stopIndexing();
         indexingStateManager.stopIndexing();
-        return ResponseEntity.ok(ApiResponse.success("Indexing stopped"));
+        log.info("Индексация остановлена");
+        return ResponseEntity.ok(ApiResponse.success("Индексация остановлена"));
     }
 }
