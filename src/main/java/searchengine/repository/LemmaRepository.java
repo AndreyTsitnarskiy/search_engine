@@ -16,9 +16,6 @@ import java.util.Set;
 @Repository
 public interface LemmaRepository extends JpaRepository<LemmaEntity, Integer> {
 
-    @Query("SELECT l FROM LemmaEntity l WHERE l.lemma IN :lemmas AND l.site.id = :siteId")
-    List<LemmaEntity> getExistsLemmas(@Param("lemmas") List<String> lemmas, @Param("siteId") int siteId);
-
     @Modifying
     @Query(value = "TRUNCATE TABLE sites_parsing.lemmas RESTART IDENTITY CASCADE", nativeQuery = true)
     void truncateAllLemmas();
@@ -28,4 +25,7 @@ public interface LemmaRepository extends JpaRepository<LemmaEntity, Integer> {
     @Modifying
     @Query("UPDATE LemmaEntity l SET l.frequency = l.frequency + 1 WHERE l.site.id = :siteId AND l.lemma = :lemma")
     void incrementFrequency(@Param("siteId") int siteId, @Param("lemma") String lemma);
+
+    @Query("SELECT l FROM LemmaEntity l JOIN IndexEntity it ON l.id = it.lemma.id WHERE it.page.id = :pageId")
+    List<LemmaEntity> findUnusedLemmasBySite(@Param("pageId") int pageId);
 }

@@ -5,10 +5,10 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 import searchengine.entity.PageEntity;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PageRepository extends JpaRepository<PageEntity, Integer> {
@@ -22,4 +22,7 @@ public interface PageRepository extends JpaRepository<PageEntity, Integer> {
     @Modifying
     @Query(value = "TRUNCATE TABLE sites_parsing.page RESTART IDENTITY CASCADE", nativeQuery = true)
     void truncateAllPages();
+
+    @Query("SELECT p FROM PageEntity p WHERE p.site.id = :siteId AND p.path = :uri")
+    Optional<PageEntity> findBySiteAndPath(@Param("siteId") int siteEntity, @Param("uri") String uri);
 }

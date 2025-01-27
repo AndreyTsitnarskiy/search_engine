@@ -18,6 +18,7 @@ import javax.swing.text.html.parser.Entity;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -78,6 +79,34 @@ public class RepositoryManager {
         indexEntity.setLemma(lemmaEntity);
         indexEntity.setPage(pageEntity);
         indexRepository.save(indexEntity);
+    }
+
+    @Transactional
+    public Optional<SiteEntity> findSiteByUrl(String url) {
+        return siteRepository.findAll().stream()
+                .filter(site -> url.startsWith(site.getUrl()))
+                .findFirst();
+    }
+
+    @Transactional
+    public void deletePageAndAssociatedData(String url, SiteEntity siteEntity) {
+        String uri = url.substring(siteEntity.getUrl().length());
+        Optional<PageEntity> pageEntityOpt = pageRepository.findBySiteAndPath(siteEntity.getId(), uri);
+
+        if (pageEntityOpt.isPresent()) {
+            PageEntity pageEntity = pageEntityOpt.get();
+            indexRepository.deleteAllByPage(pageEntity.getId());
+            List<LemmaEntity> lemmasToDecrement = lemmaRepository.findUnusedLemmasBySite(pageEntity.getId());
+            lemmasToDecrement.forEach(lemma -> {
+                lemma.setFrequency(lemma.getFrequency() - 1);
+            });
+            lemmaRepository.saveAll(lemmasToDecrement);
+            pageRepository.delete(pageEntity);
+
+            log.info("Удалены индексы URL: {}, сделан декримент у {} лемм", url, lemmasToDecrement.size());
+        } else {
+            log.warn("Страница с URL: {} не найдена", url);
+        }
     }
 
     @Transactional

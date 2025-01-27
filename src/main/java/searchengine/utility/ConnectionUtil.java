@@ -28,22 +28,6 @@ public class ConnectionUtil {
                 .ignoreHttpErrors(true);
     }
 
-/*    public static Document getConnectionWithRetry(String url, String userAgent, String referrer, int retries) throws Exception {
-        int attempts = 0;
-        while (attempts < retries) {
-            try {
-                return ConnectionUtil.getConnection(url, referrer, userAgent).get();
-            } catch (IOException e) {
-                attempts++;
-                if (attempts >= retries) {
-                    throw new Exception("Failed to connect after " + retries + " attempts", e);
-                }
-                Thread.sleep(TIMEOUT);
-            }
-        }
-        return null;
-    }*/
-
     public static int getStatusCode(String url) {
         int code = 0;
         try {

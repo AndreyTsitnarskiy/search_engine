@@ -50,7 +50,12 @@ public class ApiController {
 
     @PostMapping(value = "/indexPage", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public ResponseEntity<ApiResponse> indexPage(@RequestParam(value = "url") String url) {
-        return ResponseEntity.ok(indexingSitesService.indexPage(URLDecoder.decode(url, StandardCharsets.UTF_8)).getBody());
+        try {
+            return ResponseEntity.ok(indexingSitesService.indexPage(URLDecoder.decode(url, StandardCharsets.UTF_8)).getBody());
+        } catch (Exception e) {
+            log.error("Error during API call: {}", e.getMessage());
+            return ResponseEntity.ok(ApiResponse.failure("Error processing request"));
+        }
     }
 
     @GetMapping("/search")

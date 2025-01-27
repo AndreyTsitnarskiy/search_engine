@@ -29,9 +29,14 @@ public class IndexingSitesImpl implements IndexingSitesService {
 
     @Override
     public ResponseEntity<ApiResponse> indexPage(String path) {
-        log.info("INDEX PAGE: " + path);
-        ApiResponse apiResponse = new ApiResponse(true, "Single parse");
-        return ResponseEntity.ok(apiResponse);
+        log.info("INDEX PAGE: {}", path);
+        try {
+            pageProcessService.reindexSinglePage(path);
+            return ResponseEntity.ok(ApiResponse.success("Page reindexed successfully"));
+        } catch (Exception e) {
+            log.error("Error during reindexing page: {}", e.getMessage());
+            return ResponseEntity.ok(ApiResponse.failure("Failed to reindex page"));
+        }
     }
 
     @Override
