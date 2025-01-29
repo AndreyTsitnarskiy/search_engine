@@ -27,13 +27,14 @@ public class PageProcessServiceImpl implements PageProcessService {
 
     @Override
     public void indexingAllSites() {
+        log.info("Поток: {} - Начало индексации всех сайтов", Thread.currentThread().getName());
         repositoryManager.truncateAllSiteAndPages();
         List<SiteEntity> siteEntityList = repositoryManager.getListSiteEntity();
         try {
             parseSites(siteEntityList);
             forkJoinPoolManager.shutdown();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Поток: {} - Ошибка при индексации всех сайтов: {}", Thread.currentThread().getName(), e.getMessage());
         }
     }
 
@@ -70,6 +71,7 @@ public class PageProcessServiceImpl implements PageProcessService {
     }
 
     private void parseSites(List<SiteEntity> sites) {
+        log.info("Поток: {} - Начинаем парсинг сайтов. Количество сайтов: {}", Thread.currentThread().getName(), sites.size());
         List<SiteTaskRecursive> siteTasks = new ArrayList<>();
 
         for (SiteEntity siteEntity : sites) {
@@ -85,6 +87,7 @@ public class PageProcessServiceImpl implements PageProcessService {
         }
 
         forkJoinPoolManager.executeTasks(siteTasks);
+        log.info("Поток: {} - Завершили выполнение задач", Thread.currentThread().getName());
 
         for (SiteEntity siteEntity : sites) {
             if (siteEntity.getStatus() != Status.FAILED) {

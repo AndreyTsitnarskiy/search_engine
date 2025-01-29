@@ -1,10 +1,10 @@
 package searchengine.services.indexing;
 
-import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.nodes.Document;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
@@ -14,7 +14,6 @@ import searchengine.repository.LemmaRepository;
 import searchengine.repository.PageRepository;
 import searchengine.repository.SiteRepository;
 
-import javax.swing.text.html.parser.Entity;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -59,7 +58,7 @@ public class RepositoryManager {
     }
 
     @Transactional
-    public synchronized LemmaEntity processAndSaveLemma(SiteEntity siteEntity, String lemma) {
+    public LemmaEntity processAndSaveLemma(SiteEntity siteEntity, String lemma) {
          LemmaEntity lemmaEntity = lemmaRepository.findBySite_IdAndLemma(siteEntity.getId(), lemma)
                 .orElseGet(() -> {
                     LemmaEntity newLemma = new LemmaEntity();
@@ -81,7 +80,6 @@ public class RepositoryManager {
         indexRepository.save(indexEntity);
     }
 
-    @Transactional
     public Optional<SiteEntity> findSiteByUrl(String url) {
         return siteRepository.findAll().stream()
                 .filter(site -> url.startsWith(site.getUrl()))
