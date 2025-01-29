@@ -25,8 +25,8 @@ public class IndexingSitesImpl implements IndexingSitesService {
         }
 
         try {
-            pageProcessService.indexingAllSites();
             log.info("Индексация всех сайтов запущена");
+            pageProcessService.indexingAllSites();
             return ResponseEntity.ok(ApiResponse.success("Индексация начата"));
         } catch (Exception e) {
             log.error("Ошибка при запуске индексации: {}", e.getMessage());
