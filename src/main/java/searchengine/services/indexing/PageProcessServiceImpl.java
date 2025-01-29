@@ -53,13 +53,11 @@ public class PageProcessServiceImpl implements PageProcessService {
         Document document = siteTaskService.loadPageDocument(url, siteEntity);
 
         if (document == null) {
-            log.error("Ошибка извлечения документа URL: {}", url);
             return;
         }
 
         String uri = url.substring(siteEntity.getUrl().length());
         PageEntity pageEntity = repositoryManager.processPage(uri, document, siteEntity);
-
         siteTaskService.processLemmas(document, siteEntity, pageEntity);
 
         log.info("Реиндекс URL: {} успешен", url);
@@ -71,7 +69,6 @@ public class PageProcessServiceImpl implements PageProcessService {
     }
 
     private void parseSites(List<SiteEntity> sites) {
-        log.info("Поток: {} - Начинаем парсинг сайтов. Количество сайтов: {}", Thread.currentThread().getName(), sites.size());
         List<SiteTaskRecursive> siteTasks = new ArrayList<>();
 
         for (SiteEntity siteEntity : sites) {
@@ -87,7 +84,6 @@ public class PageProcessServiceImpl implements PageProcessService {
         }
 
         forkJoinPoolManager.executeTasks(siteTasks);
-        log.info("Поток: {} - Завершили выполнение задач", Thread.currentThread().getName());
 
         for (SiteEntity siteEntity : sites) {
             if (siteEntity.getStatus() != Status.FAILED) {

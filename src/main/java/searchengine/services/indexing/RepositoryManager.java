@@ -101,8 +101,6 @@ public class RepositoryManager {
             });
             lemmaRepository.saveAll(lemmasToDecrement);
             pageRepository.delete(pageEntity);
-
-            log.info("Удалены индексы URL: {}, сделан декримент у {} лемм", url, lemmasToDecrement.size());
         } else {
             log.warn("Страница с URL: {} не найдена", url);
         }

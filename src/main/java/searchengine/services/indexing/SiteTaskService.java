@@ -29,7 +29,6 @@ public class SiteTaskService {
     public Document loadPageDocument(String url, SiteEntity siteEntity) {
         try {
             Connection connection = ConnectionUtil.getConnection(url, property.getReferrer(), property.getUserAgent());
-            log.info("Возвращаем документ для {}", url);
             return connection.get();
         } catch (ConnectException ex) {
             log.warn("Ошибка подключения");
@@ -42,7 +41,6 @@ public class SiteTaskService {
 
     public boolean isValidUrl(String url, SiteEntity siteEntity) {
         String siteName = siteEntity.getUrl();
-        log.info("Результат обработки isValidUrl: {}", !UtilCheck.isFileUrl(url) && UtilCheck.containsSiteName(url, siteName));
         return !UtilCheck.isFileUrl(url) && UtilCheck.containsSiteName(url, siteName);
     }
 
@@ -54,11 +52,9 @@ public class SiteTaskService {
     }
 
     public synchronized void processLemmas(Document document, SiteEntity siteEntity, PageEntity pageEntity) {
-        log.info("Обрабатываем леммы для {}", pageEntity.getPath());
         try {
             String text = document.body().text();
             Map<String, Integer> lemmaMap = LemmaExecute.getLemmaMap(text);
-            log.info("Отработал класс извлечения лемм LemmaExecute.getLemmaMap {}", lemmaMap.size());
 
             for (Map.Entry<String, Integer> lemmaEntry : lemmaMap.entrySet()) {
                 String lemma = lemmaEntry.getKey();

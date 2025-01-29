@@ -23,7 +23,6 @@ public class IndexingSitesImpl implements IndexingSitesService {
             log.info("Индексация уже запущена");
             return ResponseEntity.ok(ApiResponse.failure("Индексация уже запущена"));
         }
-
         try {
             log.info("Индексация всех сайтов запущена");
             pageProcessService.indexingAllSites();
@@ -37,11 +36,6 @@ public class IndexingSitesImpl implements IndexingSitesService {
 
     @Override
     public ResponseEntity<ApiResponse> indexPage(String path) {
-        if (!indexingStateManager.isIndexing()) {
-            log.warn("Индексация не запущена, реиндексация отдельной страницы невозможна");
-            return ResponseEntity.ok(ApiResponse.failure("Индексация не запущена"));
-        }
-
         log.info("Реиндексация страницы: {}", path);
         try {
             pageProcessService.reindexSinglePage(path);
