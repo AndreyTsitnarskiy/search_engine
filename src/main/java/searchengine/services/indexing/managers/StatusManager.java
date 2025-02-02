@@ -1,4 +1,4 @@
-package searchengine.services.indexing;
+package searchengine.services.indexing.managers;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -39,7 +39,7 @@ public class StatusManager {
 
     @Transactional
     public void updateStatusSiteFailed(SiteEntity siteEntity, String lastError) {
-        siteRepository.updateSiteStatusAndLastError(siteEntity.getId(), Status.INDEXING, LocalDateTime.now(), lastError);
+        siteRepository.updateSiteStatusAndLastError(siteEntity.getId(), Status.FAILED, LocalDateTime.now(), lastError);
         siteErrorMap.put(siteEntity.getId(), true);
     }
 

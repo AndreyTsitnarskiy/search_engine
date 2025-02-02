@@ -1,4 +1,4 @@
-package searchengine.services.indexing;
+package searchengine.services.indexing.managers;
 
 import org.springframework.stereotype.Service;
 

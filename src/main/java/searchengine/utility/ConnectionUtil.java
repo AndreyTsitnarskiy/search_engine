@@ -16,14 +16,13 @@ import java.net.URL;
 @UtilityClass
 public class ConnectionUtil {
 
-    private static final int MAX_RETRIES = 3;
-    private static final int TIMEOUT = 5000; //
+    private static final int TIMEOUT = 30000;
 
     public static Connection getConnection(String pagePath, String userAgent, String referrer) {
         return Jsoup.connect(pagePath)
                 .userAgent(userAgent)
                 .referrer(referrer)
-                //.timeout(3000)
+                .timeout(TIMEOUT)
                 .followRedirects(true)
                 .ignoreHttpErrors(true);
     }

@@ -1,10 +1,9 @@
-package searchengine.services.indexing;
+package searchengine.services.indexing.managers;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.nodes.Document;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
@@ -32,6 +31,8 @@ public class RepositoryManager {
     private final LemmaRepository lemmaRepository;
     private final IndexRepository indexRepository;
 
+    private final ConcurrentHashMap<String, Object> locks = new ConcurrentHashMap<>();
+
     public List<SiteEntity> getListSiteEntity() {
         List<Site> sites = sitesList.getSites();
         List<SiteEntity> siteEntityList = new ArrayList<>();
@@ -47,6 +48,10 @@ public class RepositoryManager {
         return siteEntityList;
     }
 
+    public List<SiteEntity> getAllSitesFromRepository(){
+        return siteRepository.findAll();
+    }
+
     @Transactional
     public PageEntity processPage(String url, Document document, SiteEntity siteEntity) {
         PageEntity pageEntity = new PageEntity();
@@ -60,16 +65,26 @@ public class RepositoryManager {
 
     @Transactional
     public LemmaEntity processAndSaveLemma(SiteEntity siteEntity, String lemma) {
-         LemmaEntity lemmaEntity = lemmaRepository.findBySite_IdAndLemma(siteEntity.getId(), lemma)
-                .orElseGet(() -> {
-                    LemmaEntity newLemma = new LemmaEntity();
-                    newLemma.setSite(siteEntity);
-                    newLemma.setLemma(lemma);
-                    newLemma.setFrequency(0);
-                    return lemmaRepository.save(newLemma);
-                });
-        lemmaRepository.incrementFrequency(siteEntity.getId(), lemma);
-        return lemmaEntity;
+        String key = siteEntity.getId() + ":" + lemma;
+        locks.putIfAbsent(key, new Object());
+
+        synchronized (locks.get(key)) {
+            try {
+                LemmaEntity lemmaEntity = lemmaRepository.findBySite_IdAndLemma(siteEntity.getId(), lemma)
+                        .orElseGet(() -> {
+                            LemmaEntity newLemma = new LemmaEntity();
+                            newLemma.setSite(siteEntity);
+                            newLemma.setLemma(lemma);
+                            newLemma.setFrequency(0);
+                            return lemmaRepository.save(newLemma);
+                        });
+
+                lemmaRepository.incrementFrequency(siteEntity.getId(), lemma);
+                return lemmaEntity;
+            } finally {
+                locks.remove(key);
+            }
+        }
     }
 
     @Transactional

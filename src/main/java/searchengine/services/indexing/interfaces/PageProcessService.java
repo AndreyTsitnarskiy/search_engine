@@ -6,4 +6,6 @@ public interface PageProcessService {
     void reindexSinglePage(String path);
 
     void stopIndexing();
+
+    void stopIndexingNow();
 }

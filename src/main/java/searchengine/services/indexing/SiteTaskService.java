@@ -5,16 +5,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Connection;
 import org.jsoup.nodes.Document;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import searchengine.entity.LemmaEntity;
 import searchengine.entity.PageEntity;
 import searchengine.entity.SiteEntity;
+import searchengine.services.indexing.managers.RepositoryManager;
+import searchengine.services.indexing.managers.StatusManager;
 import searchengine.utility.ConnectionUtil;
 import searchengine.utility.LemmaExecute;
 import searchengine.utility.PropertiesProject;
 import searchengine.utility.UtilCheck;
 
-import java.rmi.ConnectException;
 import java.util.Map;
 
 @Slf4j
@@ -30,9 +30,6 @@ public class SiteTaskService {
         try {
             Connection connection = ConnectionUtil.getConnection(url, property.getReferrer(), property.getUserAgent());
             return connection.get();
-        } catch (ConnectException ex) {
-            log.warn("Ошибка подключения");
-            return null;
         } catch (Exception e) {
             handleTaskError(url, e, siteEntity);
             return null;
@@ -51,7 +48,7 @@ public class SiteTaskService {
         statusManager.updateStatusSiteFailed(siteEntity, e.getMessage());
     }
 
-    public synchronized void processLemmas(Document document, SiteEntity siteEntity, PageEntity pageEntity) {
+    public void processLemmas(Document document, SiteEntity siteEntity, PageEntity pageEntity) {
         try {
             String text = document.body().text();
             Map<String, Integer> lemmaMap = LemmaExecute.getLemmaMap(text);

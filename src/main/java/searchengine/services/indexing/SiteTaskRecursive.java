@@ -4,8 +4,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
+import searchengine.services.indexing.managers.ForkJoinPoolManager;
 import searchengine.entity.PageEntity;
 import searchengine.entity.SiteEntity;
+import searchengine.services.indexing.managers.RepositoryManager;
+import searchengine.services.indexing.managers.StatusManager;
+import searchengine.services.indexing.managers.VisitedUrlsManager;
 import searchengine.utility.UtilCheck;
 
 import java.util.Set;
@@ -22,10 +26,15 @@ public class SiteTaskRecursive extends RecursiveAction {
     private final RepositoryManager repositoryManager;
     private final SiteTaskService siteTaskService;
     private final VisitedUrlsManager visitedUrlsManager;
+    private final ForkJoinPoolManager forkJoinPoolManager;
 
     @Override
     protected void compute() {
-        log.info("Поток: {} - Начало обработки страницы: {}", Thread.currentThread().getName(), url);
+        //log.info("Поток: {} - Начало обработки страницы: {}", Thread.currentThread().getName(), url);
+        if (forkJoinPoolManager.isIndexingStopped()) {
+            log.warn("Индексация остановлена, прерываем задачу для {}", url);
+            return;
+        }
         if (!siteTaskService.isValidUrl(url, siteEntity)) {
             return;
         }
@@ -58,7 +67,8 @@ public class SiteTaskRecursive extends RecursiveAction {
                         statusManager,
                         repositoryManager,
                         siteTaskService,
-                        visitedUrlsManager))
+                        visitedUrlsManager,
+                        forkJoinPoolManager))
                 .collect(Collectors.toSet());
     }
 }

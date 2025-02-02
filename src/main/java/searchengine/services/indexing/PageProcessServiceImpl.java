@@ -4,11 +4,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.nodes.Document;
 import org.springframework.stereotype.Service;
-import searchengine.config.ForkJoinPoolManager;
+import searchengine.services.indexing.managers.ForkJoinPoolManager;
 import searchengine.entity.PageEntity;
 import searchengine.entity.SiteEntity;
 import searchengine.entity.Status;
 import searchengine.services.indexing.interfaces.PageProcessService;
+import searchengine.services.indexing.managers.RepositoryManager;
+import searchengine.services.indexing.managers.StatusManager;
+import searchengine.services.indexing.managers.VisitedUrlsManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,15 +30,38 @@ public class PageProcessServiceImpl implements PageProcessService {
 
     @Override
     public void indexingAllSites() {
-        log.info("Поток: {} - Начало индексации всех сайтов", Thread.currentThread().getName());
+        log.info("Начало индексации всех сайтов");
         repositoryManager.truncateAllSiteAndPages();
         List<SiteEntity> siteEntityList = repositoryManager.getListSiteEntity();
+        log.info("Количество сайтов для индексации: {}", siteEntityList.size());
+        if(siteEntityList.size() != 0){
+            forkJoinPoolManager.restartIfNeeded();
+        }
         try {
             parseSites(siteEntityList);
-            forkJoinPoolManager.shutdown();
+            stopIndexingNow();
         } catch (Exception e) {
-            log.error("Поток: {} - Ошибка при индексации всех сайтов: {}", Thread.currentThread().getName(), e.getMessage());
+            log.error("Ошибка индексации: {}", e.getMessage(), e);
         }
+    }
+
+    @Override
+    public void stopIndexingNow() {
+        log.warn("Принудительная остановка индексации!");
+        forkJoinPoolManager.shutdownNow();
+        List<SiteEntity> siteEntityList = repositoryManager.getAllSitesFromRepository();
+        for (SiteEntity siteEntity : siteEntityList) {
+            if (siteEntity.getStatus() != Status.INDEXED && siteEntity.getStatus() != Status.FAILED) {
+                statusManager.updateStatusSiteFailed(siteEntity, "Индексация остановлена пользователем");
+            }
+            visitedUrlsManager.clearUrls(siteEntity.getUrl());
+            statusManager.clearSiteState(siteEntity.getId());
+        }
+    }
+
+    @Override
+    public void stopIndexing() {
+        forkJoinPoolManager.shutdown();
     }
 
     @Override
@@ -45,15 +71,14 @@ public class PageProcessServiceImpl implements PageProcessService {
         Optional<SiteEntity> siteEntityOpt = repositoryManager.findSiteByUrl(url);
         if (siteEntityOpt.isEmpty()) {
             log.warn("Сайт не найден URL: {}", url);
-            return;
+            throw new IllegalArgumentException("Данная страница находится за пределами сайтов, указанных в конфигурационном файле");
         }
         SiteEntity siteEntity = siteEntityOpt.get();
         repositoryManager.deletePageAndAssociatedData(url, siteEntity);
 
         Document document = siteTaskService.loadPageDocument(url, siteEntity);
-
         if (document == null) {
-            return;
+            throw new IllegalArgumentException("Ошибка при загрузке страницы по URL: " + url);
         }
 
         String uri = url.substring(siteEntity.getUrl().length());
@@ -61,11 +86,6 @@ public class PageProcessServiceImpl implements PageProcessService {
         siteTaskService.processLemmas(document, siteEntity, pageEntity);
 
         log.info("Реиндекс URL: {} успешен", url);
-    }
-
-    @Override
-    public void stopIndexing() {
-        forkJoinPoolManager.shutdown();
     }
 
     private void parseSites(List<SiteEntity> sites) {
@@ -79,10 +99,11 @@ public class PageProcessServiceImpl implements PageProcessService {
                     statusManager,
                     repositoryManager,
                     siteTaskService,
-                    visitedUrlsManager));
+                    visitedUrlsManager,
+                    forkJoinPoolManager));
             visitedUrlsManager.isUrlVisited(siteEntity.getUrl());
         }
-
+        log.info("Запускаем задачи ForkJoinPool. Количество задач: {}", siteTasks.size());
         forkJoinPoolManager.executeTasks(siteTasks);
 
         for (SiteEntity siteEntity : sites) {

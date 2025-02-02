@@ -40,21 +40,24 @@ public class ApiController {
 
     @GetMapping("/startIndexing")
     public ResponseEntity<ApiResponse> startIndexing() {
+        log.info("Запрос на старт индексации получен");
         return indexingSitesService.startIndexing();
     }
 
     @GetMapping("/stopIndexing")
     public ResponseEntity<ApiResponse> stopIndexing() {
+        log.info("Запрос на остановку индексации получен");
         return indexingSitesService.stopIndexing();
     }
 
     @PostMapping(value = "/indexPage", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public ResponseEntity<ApiResponse> indexPage(@RequestParam(value = "url") String url) {
         try {
-            return ResponseEntity.ok(indexingSitesService.indexPage(URLDecoder.decode(url, StandardCharsets.UTF_8)).getBody());
+            String decodedUrl = URLDecoder.decode(url, StandardCharsets.UTF_8);
+            return indexingSitesService.indexPage(decodedUrl);
         } catch (Exception e) {
-            log.error("Error during API call: {}", e.getMessage());
-            return ResponseEntity.ok(ApiResponse.failure("Error processing request"));
+            log.error("Ошибка при вызове API для переиндексации страницы: {}", e.getMessage());
+            return ResponseEntity.ok(new ApiResponse(false, "Ошибка обработки запроса"));
         }
     }
 

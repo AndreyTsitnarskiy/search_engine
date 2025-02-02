@@ -4,10 +4,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import searchengine.config.IndexingStateManager;
 import searchengine.dto.response.ApiResponse;
 import searchengine.services.indexing.interfaces.IndexingSitesService;
 import searchengine.services.indexing.interfaces.PageProcessService;
+import searchengine.services.indexing.managers.IndexingStateManager;
 
 @Slf4j
 @Service
@@ -18,43 +18,45 @@ public class IndexingSitesImpl implements IndexingSitesService {
     private final IndexingStateManager indexingStateManager;
 
     @Override
-    public ResponseEntity<ApiResponse> startIndexing() {
-        if (!indexingStateManager.startIndexing()) {
-            log.info("Индексация уже запущена");
-            return ResponseEntity.ok(ApiResponse.failure("Индексация уже запущена"));
+    public synchronized ResponseEntity<ApiResponse> startIndexing() {
+        log.info("Запрос на старт индексации получен");
+        if (indexingStateManager.isIndexing()) {
+            return ResponseEntity.ok(new ApiResponse(false, "Индексация уже запущена"));
         }
-        try {
-            log.info("Индексация всех сайтов запущена");
-            pageProcessService.indexingAllSites();
-            return ResponseEntity.ok(ApiResponse.success("Индексация начата"));
-        } catch (Exception e) {
-            log.error("Ошибка при запуске индексации: {}", e.getMessage());
-            indexingStateManager.stopIndexing();
-            return ResponseEntity.ok(ApiResponse.failure("Ошибка при запуске индексации"));
+        indexingStateManager.startIndexing();
+        new Thread(() -> {
+            try {
+                log.info("Поток индексации стартовал");
+                pageProcessService.indexingAllSites();
+            } catch (Exception e) {
+                log.error("Ошибка в потоке индексации", e);
+            }
+        }).start();
+        return ResponseEntity.ok(new ApiResponse(true));
+    }
+
+    @Override
+    public synchronized ResponseEntity<ApiResponse> stopIndexing() {
+        if (!indexingStateManager.isIndexing()) {
+            return ResponseEntity.ok(new ApiResponse(false, "Индексация не запущена"));
         }
+        indexingStateManager.stopIndexing();
+        pageProcessService.stopIndexingNow(); // Резкое завершение
+        log.info("Остановка индексации");
+        return ResponseEntity.ok(new ApiResponse(true));
     }
 
     @Override
     public ResponseEntity<ApiResponse> indexPage(String path) {
-        log.info("Реиндексация страницы: {}", path);
         try {
             pageProcessService.reindexSinglePage(path);
-            return ResponseEntity.ok(ApiResponse.success("Реиндексация страницы завершена"));
+            return ResponseEntity.ok(new ApiResponse(true));
+        } catch (IllegalArgumentException e) {
+            log.error("Ошибка обработки URL: {}", e.getMessage());
+            return ResponseEntity.ok(new ApiResponse(false, e.getMessage()));
         } catch (Exception e) {
             log.error("Ошибка при реиндексации страницы: {}", e.getMessage());
-            return ResponseEntity.ok(ApiResponse.failure("Ошибка при реиндексации страницы"));
+            return ResponseEntity.ok(new ApiResponse(false, "Ошибка обработки запроса"));
         }
-    }
-
-    @Override
-    public ResponseEntity<ApiResponse> stopIndexing() {
-        if (!indexingStateManager.isIndexing()) {
-            log.warn("Индексация не запущена, остановка невозможна");
-            return ResponseEntity.ok(ApiResponse.failure("Индексация не запущена"));
-        }
-        pageProcessService.stopIndexing();
-        indexingStateManager.stopIndexing();
-        log.info("Индексация остановлена");
-        return ResponseEntity.ok(ApiResponse.success("Индексация остановлена"));
     }
 }
