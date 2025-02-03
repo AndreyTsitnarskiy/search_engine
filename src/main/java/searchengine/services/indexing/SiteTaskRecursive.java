@@ -39,9 +39,6 @@ public class SiteTaskRecursive extends RecursiveAction {
             return;
         }
         Document doc = siteTaskService.loadPageDocument(url, siteEntity);
-        if (doc == null) {
-            return;
-        }
         String uri = url.substring(siteEntity.getUrl().length());
         PageEntity pageEntity = repositoryManager.processPage(uri, doc, siteEntity);
         siteTaskService.processLemmas(doc, siteEntity, pageEntity);

@@ -10,6 +10,7 @@ import searchengine.repository.PageRepository;
 import searchengine.repository.SiteRepository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -39,8 +40,10 @@ public class StatusManager {
 
     @Transactional
     public void updateStatusSiteFailed(SiteEntity siteEntity, String lastError) {
-        siteRepository.updateSiteStatusAndLastError(siteEntity.getId(), Status.FAILED, LocalDateTime.now(), lastError);
-        siteErrorMap.put(siteEntity.getId(), true);
+        if (siteEntity.getStatus() != Status.FAILED) {
+            siteRepository.updateSiteStatusAndLastError(siteEntity.getId(), Status.FAILED, LocalDateTime.now(), lastError);
+            siteErrorMap.put(siteEntity.getId(), true);
+        }
     }
 
     @Transactional

@@ -20,28 +20,23 @@ public class IndexingSitesImpl implements IndexingSitesService {
     @Override
     public synchronized ResponseEntity<ApiResponse> startIndexing() {
         log.info("Запрос на старт индексации получен");
-        if (indexingStateManager.isIndexing()) {
+        if (indexingStateManager.isIndexingManage()) {
             return ResponseEntity.ok(new ApiResponse(false, "Индексация уже запущена"));
         }
-        indexingStateManager.startIndexing();
+        indexingStateManager.startIndexingManage();
         new Thread(() -> {
-            try {
-                log.info("Поток индексации стартовал");
-                pageProcessService.indexingAllSites();
-            } catch (Exception e) {
-                log.error("Ошибка в потоке индексации", e);
-            }
+            pageProcessService.indexingAllSites();
         }).start();
         return ResponseEntity.ok(new ApiResponse(true));
     }
 
     @Override
     public synchronized ResponseEntity<ApiResponse> stopIndexing() {
-        if (!indexingStateManager.isIndexing()) {
+        if (!indexingStateManager.isIndexingManage()) {
             return ResponseEntity.ok(new ApiResponse(false, "Индексация не запущена"));
         }
-        indexingStateManager.stopIndexing();
-        pageProcessService.stopIndexingNow(); // Резкое завершение
+        indexingStateManager.stopIndexingManage();
+        pageProcessService.stopIndexingNow();
         log.info("Остановка индексации");
         return ResponseEntity.ok(new ApiResponse(true));
     }
@@ -55,7 +50,7 @@ public class IndexingSitesImpl implements IndexingSitesService {
             log.error("Ошибка обработки URL: {}", e.getMessage());
             return ResponseEntity.ok(new ApiResponse(false, e.getMessage()));
         } catch (Exception e) {
-            log.error("Ошибка при реиндексации страницы: {}", e.getMessage());
+            log.error("Ошибка при реиндексации страницы", e);
             return ResponseEntity.ok(new ApiResponse(false, "Ошибка обработки запроса"));
         }
     }

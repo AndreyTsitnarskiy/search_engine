@@ -10,15 +10,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class IndexingStateManager {
     private final AtomicBoolean indexing = new AtomicBoolean(false);
 
-    public boolean isIndexing() {
+    public boolean isIndexingManage() {
         return indexing.get();
     }
 
-    public void startIndexing() {
+    public void startIndexingManage() {
         indexing.set(true);
     }
 
-    public void stopIndexing() {
+    public void stopIndexingManage() {
         indexing.set(false);
     }
 }

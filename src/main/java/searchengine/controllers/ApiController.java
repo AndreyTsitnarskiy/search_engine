@@ -52,13 +52,7 @@ public class ApiController {
 
     @PostMapping(value = "/indexPage", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public ResponseEntity<ApiResponse> indexPage(@RequestParam(value = "url") String url) {
-        try {
-            String decodedUrl = URLDecoder.decode(url, StandardCharsets.UTF_8);
-            return indexingSitesService.indexPage(decodedUrl);
-        } catch (Exception e) {
-            log.error("Ошибка при вызове API для переиндексации страницы: {}", e.getMessage());
-            return ResponseEntity.ok(new ApiResponse(false, "Ошибка обработки запроса"));
-        }
+        return indexingSitesService.indexPage(URLDecoder.decode(url, StandardCharsets.UTF_8));
     }
 
     @GetMapping("/search")

@@ -33,30 +33,20 @@ public class PageProcessServiceImpl implements PageProcessService {
         log.info("Начало индексации всех сайтов");
         repositoryManager.truncateAllSiteAndPages();
         List<SiteEntity> siteEntityList = repositoryManager.getListSiteEntity();
-        log.info("Количество сайтов для индексации: {}", siteEntityList.size());
         if(siteEntityList.size() != 0){
             forkJoinPoolManager.restartIfNeeded();
         }
-        try {
-            parseSites(siteEntityList);
-            stopIndexingNow();
-        } catch (Exception e) {
-            log.error("Ошибка индексации: {}", e.getMessage(), e);
-        }
+        parseSites(siteEntityList);
+        stopIndexing();
     }
 
     @Override
     public void stopIndexingNow() {
         log.warn("Принудительная остановка индексации!");
         forkJoinPoolManager.shutdownNow();
+        String message = "Индексация остановлена пользователем";
         List<SiteEntity> siteEntityList = repositoryManager.getAllSitesFromRepository();
-        for (SiteEntity siteEntity : siteEntityList) {
-            if (siteEntity.getStatus() != Status.INDEXED && siteEntity.getStatus() != Status.FAILED) {
-                statusManager.updateStatusSiteFailed(siteEntity, "Индексация остановлена пользователем");
-            }
-            visitedUrlsManager.clearUrls(siteEntity.getUrl());
-            statusManager.clearSiteState(siteEntity.getId());
-        }
+        updateAndClearStatuses(siteEntityList, message);
     }
 
     @Override
@@ -70,16 +60,12 @@ public class PageProcessServiceImpl implements PageProcessService {
 
         Optional<SiteEntity> siteEntityOpt = repositoryManager.findSiteByUrl(url);
         if (siteEntityOpt.isEmpty()) {
-            log.warn("Сайт не найден URL: {}", url);
             throw new IllegalArgumentException("Данная страница находится за пределами сайтов, указанных в конфигурационном файле");
         }
         SiteEntity siteEntity = siteEntityOpt.get();
         repositoryManager.deletePageAndAssociatedData(url, siteEntity);
 
         Document document = siteTaskService.loadPageDocument(url, siteEntity);
-        if (document == null) {
-            throw new IllegalArgumentException("Ошибка при загрузке страницы по URL: " + url);
-        }
 
         String uri = url.substring(siteEntity.getUrl().length());
         PageEntity pageEntity = repositoryManager.processPage(uri, document, siteEntity);
@@ -105,11 +91,22 @@ public class PageProcessServiceImpl implements PageProcessService {
         }
         log.info("Запускаем задачи ForkJoinPool. Количество задач: {}", siteTasks.size());
         forkJoinPoolManager.executeTasks(siteTasks);
+        updateAndClearStatuses(sites);
+    }
 
-        for (SiteEntity siteEntity : sites) {
-            if (siteEntity.getStatus() != Status.FAILED) {
-                statusManager.updateStatusIndexed(siteEntity);
+    private void updateAndClearStatuses(List<SiteEntity> siteEntityList, String message){
+        for (SiteEntity siteEntity : siteEntityList) {
+            if (siteEntity.getStatus() != Status.INDEXED) {
+                statusManager.updateStatusSiteFailed(siteEntity, message);
             }
+            visitedUrlsManager.clearUrls(siteEntity.getUrl());
+            statusManager.clearSiteState(siteEntity.getId());
+        }
+    }
+
+    private void updateAndClearStatuses(List<SiteEntity> siteEntityList){
+        for (SiteEntity siteEntity : siteEntityList) {
+            statusManager.updateStatusIndexed(siteEntity);
             visitedUrlsManager.clearUrls(siteEntity.getUrl());
             statusManager.clearSiteState(siteEntity.getId());
         }
