@@ -5,13 +5,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.jsoup.nodes.Document;
 import org.springframework.stereotype.Service;
 import searchengine.exceptions.SiteExceptions;
-import searchengine.services.indexing.managers.ForkJoinPoolManager;
+import searchengine.services.managers.ForkJoinPoolManager;
 import searchengine.entity.PageEntity;
 import searchengine.entity.SiteEntity;
 import searchengine.services.indexing.interfaces.PageProcessService;
-import searchengine.services.indexing.managers.RepositoryManager;
-import searchengine.services.indexing.managers.StatusManager;
-import searchengine.services.indexing.managers.VisitedUrlsManager;
+import searchengine.services.managers.RepositoryManager;
+import searchengine.services.managers.StatusManager;
+import searchengine.services.managers.VisitedUrlsManager;
 
 import java.util.ArrayList;
 import java.util.List;

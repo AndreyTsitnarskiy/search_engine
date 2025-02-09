@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import searchengine.dto.response.ApiResponse;
 import searchengine.services.indexing.interfaces.IndexingSitesService;
 import searchengine.services.indexing.interfaces.PageProcessService;
-import searchengine.services.indexing.managers.IndexingStateManager;
+import searchengine.services.managers.IndexingStateManager;
 
 @Slf4j
 @Service

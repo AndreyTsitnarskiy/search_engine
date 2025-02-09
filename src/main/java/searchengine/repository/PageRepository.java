@@ -25,4 +25,10 @@ public interface PageRepository extends JpaRepository<PageEntity, Integer> {
 
     @Query("SELECT p FROM PageEntity p WHERE p.site.id = :siteId AND p.path = :uri")
     Optional<PageEntity> findBySiteAndPath(@Param("siteId") int siteEntity, @Param("uri") String uri);
+
+    @Query("SELECT p FROM PageEntity p " +
+            "JOIN IndexEntity i ON i.page = p " +
+            "JOIN LemmaEntity l ON i.lemma = l " +
+            "WHERE l.lemma = :lemma")
+    List<PageEntity> findPagesByLemma(@Param("lemma") String lemma);
 }

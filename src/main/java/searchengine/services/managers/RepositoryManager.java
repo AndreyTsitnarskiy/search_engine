@@ -1,4 +1,4 @@
-package searchengine.services.indexing.managers;
+package searchengine.services.managers;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -133,8 +133,8 @@ public class RepositoryManager {
         return indexRepository.calculatePageRelevance(page, lemmas);
     }
 
-    public List<PageEntity> getPagesForSearchService(String lemma, SiteEntity siteEntity){
-        return indexRepository.findPagesByLemma(lemma, siteEntity);
+    public List<PageEntity> getPagesForSearchService(String lemma){
+        return pageRepository.findPagesByLemma(lemma);
     }
 
     public SiteEntity getSiteForSearchService(String url){

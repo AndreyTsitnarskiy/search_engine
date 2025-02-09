@@ -8,7 +8,7 @@ import searchengine.dto.search.ApiSearchResponse;
 import searchengine.dto.search.ApiSearchResult;
 import searchengine.entity.PageEntity;
 import searchengine.entity.SiteEntity;
-import searchengine.services.indexing.managers.RepositoryManager;
+import searchengine.services.managers.RepositoryManager;
 import searchengine.utility.LemmaExecute;
 
 import java.util.*;
@@ -27,37 +27,36 @@ public class SearchServiceImpl implements SearchService {
     public ResponseEntity<ApiSearchResponse> search(String query, String url, int offset, int limit) {
         log.info("Search query: {}, site: {}, offset: {}, limit: {}", query, url, offset, limit);
 
-        // Валидация запроса
         if (query == null || query.trim().isEmpty()) {
+            log.warn("Пустой поисковый запрос");
             return errorResponse("Задан пустой поисковый запрос");
         }
 
-        // Проверяем существование сайта, если передан URL
         SiteEntity site = null;
         if (!url.isEmpty()) {
             site = repositoryManager.getSiteForSearchService(url);
             if (site == null) {
+                log.warn("Сайт не найден: {}", url);
                 return errorResponse("Указанный сайт не найден в индексе");
             }
         }
 
-        // Получаем список лемм
         List<String> lemmas = LemmaExecute.getLemmaList(query);
         if (lemmas.isEmpty()) {
+            log.warn("Поисковый запрос не содержит значимых слов");
             return errorResponse("Поисковый запрос не содержит значимых слов");
         }
 
         // Исключаем слишком частые леммы
         //lemmas = lemmaService.filterRareLemmas(lemmas);
 
-        // Получаем список страниц, содержащих все леммы
-        List<PageEntity> pages = getRelevantPages(lemmas, site);
+        List<PageEntity> pages = getRelevantPages(lemmas);
         if (pages.isEmpty()) {
             return successResponse(0, Collections.emptyList());
         }
 
-        // Рассчитываем релевантность
         List<ApiSearchResult> results = calculateRelevance(pages, lemmas);
+        log.info("Результаты поиска: {}", results.size());
 
         // Пагинация
         int total = results.size();
@@ -69,15 +68,21 @@ public class SearchServiceImpl implements SearchService {
         return successResponse(total, results);
     }
 
-    private List<PageEntity> getRelevantPages(List<String> lemmas, SiteEntity site) {
+    private List<PageEntity> getRelevantPages(List<String> lemmas) {
         // Берем самую редкую лемму
         String rarestLemma = lemmas.get(0);
-        List<PageEntity> pages = repositoryManager.getPagesForSearchService(rarestLemma, site);
+        log.info("Самая редкая лемма: {}", rarestLemma);
+        List<PageEntity> pages = repositoryManager.getPagesForSearchService(rarestLemma);
+        log.info("Страницы для самой редкой леммы: {}", pages.size());
 
         // Фильтруем по остальным леммам
         for (int i = 1; i < lemmas.size(); i++) {
             String lemma = lemmas.get(i);
-            pages.retainAll(repositoryManager.getPagesForSearchService(lemma, site));
+            log.info("Фильтрация по лемме: {}", lemma);
+            List<PageEntity> filteredPages = repositoryManager.getPagesForSearchService(lemma);
+            log.info("Страницы для леммы {}: {}", lemma, filteredPages.size());
+            pages.retainAll(filteredPages);
+            log.info("Страницы после фильтрации: {}", pages.size());
             if (pages.isEmpty()) break;
         }
         return pages;
@@ -90,6 +95,7 @@ public class SearchServiceImpl implements SearchService {
 
         for (PageEntity page : pages) {
             float relevance = repositoryManager.getAbsoluteRelevance(page, lemmas);
+            log.info("Релевантность страницы {}: {}", page.getPath(), relevance);
             relevanceMap.put(page, relevance);
             maxRelevance = Math.max(maxRelevance, relevance);
         }
@@ -98,9 +104,9 @@ public class SearchServiceImpl implements SearchService {
         List<ApiSearchResult> results = new ArrayList<>();
         for (PageEntity page : pages) {
             ApiSearchResult result = new ApiSearchResult();
-            result.setSite(page.getSite().getUrl());
+            result.setSite(page.getSite().getUrl() + page.getPath());
             result.setSiteName(page.getSite().getName());
-            result.setUrl(page.getPath());
+            result.setUrl(page.getSite().getUrl() + page.getPath());
             result.setTitle(extractTitle(page.getContent()));
             result.setSnippet(generateSnippet(page.getContent(), lemmas));
             result.setRelevance(relevanceMap.get(page) / maxRelevance);

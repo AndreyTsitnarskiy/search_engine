@@ -1,4 +1,4 @@
-package searchengine.services.indexing.managers;
+package searchengine.services.managers;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

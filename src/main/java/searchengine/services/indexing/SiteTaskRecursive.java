@@ -6,12 +6,12 @@ import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 import searchengine.entity.Status;
 import searchengine.exceptions.SiteExceptions;
-import searchengine.services.indexing.managers.ForkJoinPoolManager;
+import searchengine.services.managers.ForkJoinPoolManager;
 import searchengine.entity.PageEntity;
 import searchengine.entity.SiteEntity;
-import searchengine.services.indexing.managers.RepositoryManager;
-import searchengine.services.indexing.managers.StatusManager;
-import searchengine.services.indexing.managers.VisitedUrlsManager;
+import searchengine.services.managers.RepositoryManager;
+import searchengine.services.managers.StatusManager;
+import searchengine.services.managers.VisitedUrlsManager;
 import searchengine.utility.ConnectionUtil;
 import searchengine.utility.UtilCheck;
 

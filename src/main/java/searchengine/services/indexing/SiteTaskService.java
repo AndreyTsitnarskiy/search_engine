@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import searchengine.entity.LemmaEntity;
 import searchengine.entity.PageEntity;
 import searchengine.entity.SiteEntity;
-import searchengine.services.indexing.managers.RepositoryManager;
+import searchengine.services.managers.RepositoryManager;
 import searchengine.utility.ConnectionUtil;
 import searchengine.utility.LemmaExecute;
 import searchengine.utility.PropertiesProject;

@@ -52,6 +52,7 @@ public class LemmaExecute {
     public static List<String> getLemmaList(String text) {
         initMorphology();
         String[] words = arrayRussianWords(text);
+        log.info("Слова из запроса: {}", Arrays.toString(words));
         List<String> lemmaSet = new ArrayList<>();
 
         for (String word : words) {
@@ -59,12 +60,14 @@ public class LemmaExecute {
                 continue;
             }
             List<String> wordForms = morphology.getNormalForms(word);
+            log.info("Нормальные формы для слова {}: {}", word, wordForms);
             if (anyWordBaseBelongToParticle(wordForms)) {
                 lemmaSet.add(word);
                 continue;
             }
             lemmaSet.addAll(wordForms);
         }
+        log.info("Леммы из запроса: {}", lemmaSet);
         return lemmaSet;
     }
 

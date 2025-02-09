@@ -1,4 +1,4 @@
-package searchengine.services.indexing.managers;
+package searchengine.services.managers;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
