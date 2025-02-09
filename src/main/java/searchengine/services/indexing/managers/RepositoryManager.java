@@ -128,4 +128,16 @@ public class RepositoryManager {
         pageRepository.truncateAllPages();
         siteRepository.truncateAllSites();
     }
+
+    public Float getAbsoluteRelevance(PageEntity page, List<String> lemmas){
+        return indexRepository.calculatePageRelevance(page, lemmas);
+    }
+
+    public List<PageEntity> getPagesForSearchService(String lemma, SiteEntity siteEntity){
+        return indexRepository.findPagesByLemma(lemma, siteEntity);
+    }
+
+    public SiteEntity getSiteForSearchService(String url){
+        return siteRepository.findByUrl(url);
+    }
 }

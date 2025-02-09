@@ -47,9 +47,27 @@ public class StatusManager {
     }
 
     @Transactional
+    public void updateStatusesWhenUserStop(List<SiteEntity> siteEntityList, String message){
+        for (SiteEntity siteEntity : siteEntityList) {
+            if (siteEntity.getStatus() != Status.INDEXED) {
+                updateStatusSiteFailed(siteEntity, message);
+                clearSiteState(siteEntity.getId());
+            }
+        }
+    }
+
+    @Transactional
     public void updateStatusSiteIndexing(SiteEntity siteEntity) {
         siteRepository.updateSiteStatus(siteEntity.getId(), Status.INDEXING, LocalDateTime.now());
         siteErrorMap.put(siteEntity.getId(), false);
+    }
+
+    public void updateAllSitesIndexed(List<SiteEntity> siteEntityList){
+        for (SiteEntity siteEntity : siteEntityList){
+            if(siteEntity.getStatus() != Status.FAILED) {
+                updateStatusIndexed(siteEntity);
+            }
+        }
     }
 
     @Transactional

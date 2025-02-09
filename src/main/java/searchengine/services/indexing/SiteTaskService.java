@@ -9,7 +9,6 @@ import searchengine.entity.LemmaEntity;
 import searchengine.entity.PageEntity;
 import searchengine.entity.SiteEntity;
 import searchengine.services.indexing.managers.RepositoryManager;
-import searchengine.services.indexing.managers.StatusManager;
 import searchengine.utility.ConnectionUtil;
 import searchengine.utility.LemmaExecute;
 import searchengine.utility.PropertiesProject;
@@ -23,15 +22,14 @@ import java.util.Map;
 public class SiteTaskService {
 
     private final PropertiesProject property;
-    private final StatusManager statusManager;
     private final RepositoryManager repositoryManager;
 
-    public Document loadPageDocument(String url, SiteEntity siteEntity) {
+    public Document loadPageDocument(String url) {
         try {
             Connection connection = ConnectionUtil.getConnection(url, property.getReferrer(), property.getUserAgent());
             return connection.get();
         } catch (Exception e) {
-            handleTaskError(url, e, siteEntity);
+            log.error("Не удалось установить соединение с {}", url);
             return null;
         }
     }
@@ -41,12 +39,6 @@ public class SiteTaskService {
         return !UtilCheck.isFileUrl(url) && UtilCheck.containsSiteName(url, siteName);
     }
 
-    private void handleTaskError(String url, Exception e, SiteEntity siteEntity) {
-        log.error("Failed processing URL: {}", url, e);
-        int code = ConnectionUtil.getStatusCode(url);
-        statusManager.updateStatusPage(siteEntity, url, code != 0 ? code : 500);
-        statusManager.updateStatusSiteFailed(siteEntity, e.getMessage());
-    }
 
     public void processLemmas(Document document, SiteEntity siteEntity, PageEntity pageEntity) {
         try {

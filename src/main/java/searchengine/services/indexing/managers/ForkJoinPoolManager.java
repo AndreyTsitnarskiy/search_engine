@@ -40,15 +40,8 @@ public class ForkJoinPoolManager {
         forkJoinPool.shutdownNow();
     }
 
-    public void dropForkJoinPool(){
-        if (forkJoinPool.isTerminated()){
-            System.out.println("GC можно удалить forkjoinpool");
-            forkJoinPool = null;
-        }
-    }
-
     public void restartIfNeeded() {
-        if (forkJoinPool.isShutdown() || forkJoinPool.isTerminated()) {
+        if (forkJoinPool == null || forkJoinPool.isShutdown() || forkJoinPool.isTerminated()) {
             log.warn("ForkJoinPool уже завершен, перезапускаем новый...");
             forkJoinPool = new ForkJoinPool();
             isStopIndexing = false;
