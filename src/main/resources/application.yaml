@@ -35,11 +35,14 @@ spring:
       pool-name: SearchEngineHikariPool
       connection-test-query: SELECT 1
       validation-timeout: 3000
+      max-lifetime: 1800000 # 30 минут
+      connection-timeout: 30000
+      leak-detection-threshold: 60000
   jpa:
     database: postgresql
     show-sql: false
     hibernate:
-      ddl-auto: update #create-drop
+      ddl-auto: validate
       dialect: org.hibernate.dialect.PostgreSQLDialect
       naming:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
@@ -62,6 +65,9 @@ spring:
 logging:
   level:
     root: INFO
+    #org.hibernate.SQL: DEBUG
+    #org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    #searchengine: DEBUG
 
 connect:
   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.53 Safari/537.36

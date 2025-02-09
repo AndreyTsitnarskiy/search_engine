@@ -4,12 +4,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
+import searchengine.exceptions.SiteExceptions;
 import searchengine.services.indexing.managers.ForkJoinPoolManager;
 import searchengine.entity.PageEntity;
 import searchengine.entity.SiteEntity;
 import searchengine.services.indexing.managers.RepositoryManager;
 import searchengine.services.indexing.managers.StatusManager;
 import searchengine.services.indexing.managers.VisitedUrlsManager;
+import searchengine.utility.ConnectionUtil;
 import searchengine.utility.UtilCheck;
 
 import java.util.Set;
@@ -30,25 +32,38 @@ public class SiteTaskRecursive extends RecursiveAction {
 
     @Override
     protected void compute() {
-        //log.info("Поток: {} - Начало обработки страницы: {}", Thread.currentThread().getName(), url);
-        if (forkJoinPoolManager.isIndexingStopped()) {
-            log.warn("Индексация остановлена, прерываем задачу для {}", url);
-            return;
-        }
-        if (!siteTaskService.isValidUrl(url, siteEntity)) {
-            return;
-        }
-        Document doc = siteTaskService.loadPageDocument(url, siteEntity);
-        String uri = url.substring(siteEntity.getUrl().length());
-        PageEntity pageEntity = repositoryManager.processPage(uri, doc, siteEntity);
-        siteTaskService.processLemmas(doc, siteEntity, pageEntity);
+        log.debug("Начало обработки страницы: {}", url);
+        try {
+            if (forkJoinPoolManager.isIndexingStopped()) {
+                log.warn("Индексация остановлена, прерываем задачу для {}", url);
+                return;
+            }
+            if (!siteTaskService.isValidUrl(url, siteEntity)) {
+                log.debug("URL {} не соответствует корню сайта, пропускаем", url);
+                return;
+            }
+            Document doc = siteTaskService.loadPageDocument(url);
+            if (doc == null) {
+                log.warn("Не удалось загрузить документ для URL: {}", url);
+                return;
+            }
+            String uri = url.substring(siteEntity.getUrl().length());
+            PageEntity pageEntity = repositoryManager.processPage(uri, doc, siteEntity);
+            siteTaskService.processLemmas(doc, siteEntity, pageEntity);
 
-        if (statusManager.hasSiteErrors(siteEntity)) {
-            statusManager.updateStatusSiteIndexing(siteEntity);
+            if (statusManager.hasSiteErrors(siteEntity)) {
+                statusManager.updateStatusSiteIndexing(siteEntity);
+            }
+            Elements links = doc.select("a[href]");
+            Set<SiteTaskRecursive> subTasks = createSubTasks(links);
+            invokeAll(subTasks);
+        } catch (Exception e) {
+            log.error("Ошибка при обработке страницы: {}", url, e);
+            handleTaskError(url, e, siteEntity);
+            throw new SiteExceptions("Ошибка при обработке страницы: " + url, e);
+        } finally {
+            log.debug("Завершение обработки страницы: {}", url);
         }
-
-        Elements links = doc.select("a[href]");
-        invokeAll(createSubTasks(links));
     }
 
     private Set<SiteTaskRecursive> createSubTasks(Elements links) {
@@ -67,5 +82,11 @@ public class SiteTaskRecursive extends RecursiveAction {
                         visitedUrlsManager,
                         forkJoinPoolManager))
                 .collect(Collectors.toSet());
+    }
+
+    private void handleTaskError(String url, Exception e, SiteEntity siteEntity) {
+        int code = ConnectionUtil.getStatusCode(url);
+        statusManager.updateStatusPage(siteEntity, url, code != 0 ? code : 500);
+        statusManager.updateStatusSiteFailed(siteEntity, e.getMessage());
     }
 }

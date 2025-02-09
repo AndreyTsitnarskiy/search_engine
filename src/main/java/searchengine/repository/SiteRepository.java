@@ -33,4 +33,6 @@ public interface SiteRepository extends JpaRepository<SiteEntity, Integer> {
     @Query(value = "TRUNCATE TABLE sites_parsing.site RESTART IDENTITY CASCADE", nativeQuery = true)
     void truncateAllSites();
 
+    @Query("SELECT s FROM SiteEntity s WHERE s.url = :url")
+    SiteEntity findByUrl(@Param("url") String url);
 }

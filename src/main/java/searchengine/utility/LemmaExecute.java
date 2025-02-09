@@ -12,88 +12,68 @@ import java.util.*;
 @UtilityClass
 public class LemmaExecute {
 
-    private LuceneMorphology morphology;
-    private static final String WORD_TYPE_REGEX = "\\W\\w&&[^а-яА-Я\\s]";
+    private static LuceneMorphology morphology;
     private static final String[] particlesNames = new String[]{"МЕЖД", "ПРЕДЛ", "СОЮЗ"};
 
-    static {
-        try {
-            morphology = new RussianLuceneMorphology();
-        } catch (IOException e) {
-            log.error("Error initializing LuceneMorphology", e);
+    private static void initMorphology() {
+        if (morphology == null) {
+            try {
+                morphology = new RussianLuceneMorphology();
+            } catch (IOException e) {
+                log.error("Error initializing LuceneMorphology", e);
+                throw new RuntimeException("Failed to initialize LuceneMorphology", e);
+            }
         }
     }
 
     public static HashMap<String, Integer> getLemmaMap(String html) {
+        initMorphology();
         HashMap<String, Integer> lemmaMap = new HashMap<>();
-        String[] words = arrayRussianWorlds(html);
+        String[] words = arrayRussianWords(html);
+
         for (String word : words) {
-            if(word.isBlank()){
+            if (word.isBlank()) {
                 continue;
             }
-            List<String> worldInfo = morphology.getMorphInfo(word);
-            if(anyWordBaseBelongToParticle(worldInfo)) {
+            List<String> wordInfo = morphology.getMorphInfo(word);
+            if (anyWordBaseBelongToParticle(wordInfo)) {
                 continue;
             }
-
-            List<String> normalizedWorldInfo = morphology.getNormalForms(word);
-            if(normalizedWorldInfo.isEmpty()) {
+            List<String> normalizedWords = morphology.getNormalForms(word);
+            if (normalizedWords.isEmpty()) {
                 continue;
             }
-
-            String normalizedWord = normalizedWorldInfo.get(0);
-
-            if (lemmaMap.containsKey(normalizedWord)) {
-                lemmaMap.put(normalizedWord, lemmaMap.get(normalizedWord) + 1);
-            } else {
-                lemmaMap.put(normalizedWord, 1);
-            }
+            String normalizedWord = normalizedWords.get(0);
+            lemmaMap.merge(normalizedWord, 1, Integer::sum);
         }
         return lemmaMap;
     }
 
-    public static Set<String> getLemmaList(String text) {
-        String[] words = arrayRussianWorlds(text);
-        Set<String> lemmaSet = new HashSet<>();
+    public static List<String> getLemmaList(String text) {
+        initMorphology();
+        String[] words = arrayRussianWords(text);
+        List<String> lemmaSet = new ArrayList<>();
+
         for (String word : words) {
-            if(!word.isEmpty() && isRussianWord(word)) {
-                List<String> worldInfo = morphology.getNormalForms(word);
-                if(anyWordBaseBelongToParticle(worldInfo)) {
-                    lemmaSet.add(word);
-                    continue;
-                }
-                lemmaSet.addAll(worldInfo);
+            if (word.isEmpty()) {
+                continue;
             }
+            List<String> wordForms = morphology.getNormalForms(word);
+            if (anyWordBaseBelongToParticle(wordForms)) {
+                lemmaSet.add(word);
+                continue;
+            }
+            lemmaSet.addAll(wordForms);
         }
         return lemmaSet;
     }
 
-
-    private String[] arrayRussianWorlds(String text) {
-        return text.toLowerCase(Locale.ROOT).replaceAll("[^а-я\\s]", "") .trim().split("\\s+");
+    private static String[] arrayRussianWords(String text) {
+        return text.toLowerCase(Locale.ROOT).replaceAll("[^а-я\\s]", "").trim().split("\\s+");
     }
 
-    private boolean isRussianWord(String word) {
-        List<String> worldInfo = morphology.getMorphInfo(word);
-        for (String world : worldInfo) {
-            if (word.matches(WORD_TYPE_REGEX)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean isParticle(String word) {
-        for(String particle : particlesNames) {
-            if(word.toUpperCase().contains(particle)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean anyWordBaseBelongToParticle(List<String> wordBaseForms) {
-        return wordBaseForms.stream().anyMatch(LemmaExecute::isParticle);
+    private static boolean anyWordBaseBelongToParticle(List<String> wordBaseForms) {
+        return wordBaseForms.stream().anyMatch(form -> Arrays.stream(particlesNames).anyMatch(form::contains));
     }
 }
 
