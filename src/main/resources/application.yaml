@@ -1,18 +1,22 @@
 # example values
 indexing-settings:
   sites:
-#    - url: https://lenta.ru/
-#      name: Лента.ру
+    - url: https://lenta.ru/
+      name: Лента.ру
     - url: https://www.playback.ru/
       name: PlayBack.Ru
-#    - url: https://charutti.ru/
-#      name: Бренд ЧАРУТТИ
-#    - url: https://opt-opt-opt.ru/
-#      name: ТриОпт
-    - url: https://dombulgakova.ru/
-      name: PДом Булгакова
+    - url: https://ipfran.ru/
+      name: Институт прикладной физики
+    - url: https://dimonvideo.ru/
+      name: Все для мобильных устройств
+    - url: https://www.svetlovka.ru/
+      name: Библиотека Светловка
     - url: https://www.atomstroy.net/
       name: Атом строй комплекс
+    - url: https://nikoartgallery.com/
+      name: Креативное пространство
+    - url: https://radiomv.ru/
+      name: Радио
 
 server:
   port: 10100

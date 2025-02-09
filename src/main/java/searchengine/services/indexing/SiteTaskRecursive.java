@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
+import searchengine.entity.Status;
 import searchengine.exceptions.SiteExceptions;
 import searchengine.services.indexing.managers.ForkJoinPoolManager;
 import searchengine.entity.PageEntity;
@@ -14,6 +15,7 @@ import searchengine.services.indexing.managers.VisitedUrlsManager;
 import searchengine.utility.ConnectionUtil;
 import searchengine.utility.UtilCheck;
 
+import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.RecursiveAction;
 import java.util.stream.Collectors;
@@ -32,7 +34,12 @@ public class SiteTaskRecursive extends RecursiveAction {
 
     @Override
     protected void compute() {
-        log.debug("Начало обработки страницы: {}", url);
+        //log.debug("Начало обработки страницы: {}", url);
+        if (siteEntity.getStatus() == Status.FAILED) {
+            log.warn("Сайт {} уже имеет статус FAILED, пропускаем задачу для {}", siteEntity.getUrl(), url);
+            return;
+        }
+
         try {
             if (forkJoinPoolManager.isIndexingStopped()) {
                 log.warn("Индексация остановлена, прерываем задачу для {}", url);
@@ -43,10 +50,6 @@ public class SiteTaskRecursive extends RecursiveAction {
                 return;
             }
             Document doc = siteTaskService.loadPageDocument(url);
-            if (doc == null) {
-                log.warn("Не удалось загрузить документ для URL: {}", url);
-                return;
-            }
             String uri = url.substring(siteEntity.getUrl().length());
             PageEntity pageEntity = repositoryManager.processPage(uri, doc, siteEntity);
             siteTaskService.processLemmas(doc, siteEntity, pageEntity);
@@ -61,12 +64,15 @@ public class SiteTaskRecursive extends RecursiveAction {
             log.error("Ошибка при обработке страницы: {}", url, e);
             handleTaskError(url, e, siteEntity);
             throw new SiteExceptions("Ошибка при обработке страницы: " + url, e);
-        } finally {
-            log.debug("Завершение обработки страницы: {}", url);
         }
     }
 
     private Set<SiteTaskRecursive> createSubTasks(Elements links) {
+        if (siteEntity.getStatus() == Status.FAILED) {
+            log.warn("Сайт {} уже имеет статус FAILED, пропускаем создание подзадач", siteEntity.getUrl());
+            return Collections.emptySet();
+        }
+
         return links.stream()
                 .map(link -> link.absUrl("href"))
                 .filter(subUrl -> {

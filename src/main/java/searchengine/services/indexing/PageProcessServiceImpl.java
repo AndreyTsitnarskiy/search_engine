@@ -36,6 +36,7 @@ public class PageProcessServiceImpl implements PageProcessService {
         forkJoinPoolManager.restartIfNeeded();
         parseSites(siteEntityList);
         stopIndexing();
+        visitedUrlsManager.clearAllSitesUrls(siteEntityList);
     }
 
     @Override
@@ -45,6 +46,7 @@ public class PageProcessServiceImpl implements PageProcessService {
         String message = "Индексация остановлена пользователем";
         List<SiteEntity> siteEntityList = repositoryManager.getAllSitesFromRepository();
         statusManager.updateStatusesWhenUserStop(siteEntityList, message);
+        visitedUrlsManager.clearAllSitesUrls(siteEntityList);
     }
 
     @Override
@@ -84,6 +86,8 @@ public class PageProcessServiceImpl implements PageProcessService {
         List<SiteTaskRecursive> siteTasks = createSiteTasks(sites);
         log.info("Запускаем задачи ForkJoinPool. Количество задач: {}", siteTasks.size());
         forkJoinPoolManager.executeTasks(siteTasks);
+        statusManager.updateAllSitesIndexed(sites);
+        visitedUrlsManager.clearAllSitesUrls(sites);
     }
 
     private List<SiteTaskRecursive> createSiteTasks(List<SiteEntity> sites) {
@@ -102,7 +106,6 @@ public class PageProcessServiceImpl implements PageProcessService {
             ));
             visitedUrlsManager.isUrlVisited(siteEntity.getUrl());
         }
-        statusManager.updateAllSitesIndexed(sites);
         return tasks;
     }
 }
