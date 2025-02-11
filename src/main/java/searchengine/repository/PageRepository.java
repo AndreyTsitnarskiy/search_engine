@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import searchengine.entity.PageEntity;
+import searchengine.entity.SiteEntity;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,9 +27,20 @@ public interface PageRepository extends JpaRepository<PageEntity, Integer> {
     @Query("SELECT p FROM PageEntity p WHERE p.site.id = :siteId AND p.path = :uri")
     Optional<PageEntity> findBySiteAndPath(@Param("siteId") int siteEntity, @Param("uri") String uri);
 
+    int countPageEntitiesBySite(SiteEntity siteEntity);
+
     @Query("SELECT p FROM PageEntity p " +
-            "JOIN IndexEntity i ON i.page = p " +
-            "JOIN LemmaEntity l ON i.lemma = l " +
-            "WHERE l.lemma = :lemma")
-    List<PageEntity> findPagesByLemma(@Param("lemma") String lemma);
+            "JOIN IndexEntity i ON p.id = i.page.id " +
+            "JOIN LemmaEntity l ON i.lemma.id = l.id " +
+            "WHERE l.lemma IN :lemmas " +
+            "GROUP BY p.id " +
+            "HAVING COUNT(DISTINCT l.lemma) = :lemmaCount " +
+            "ORDER BY SUM(i.rank) DESC " +
+            "LIMIT :maxResults")
+    List<PageEntity> findPagesMatchingLemmas(@Param("lemmas") List<String> lemmas,
+                                             @Param("lemmaCount") int lemmaCount,
+                                             @Param("maxResults") int maxResults);
+
+    @Query("SELECT COUNT(p) FROM PageEntity p")
+    int countTotalPages();
 }

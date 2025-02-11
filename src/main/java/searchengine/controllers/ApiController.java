@@ -1,7 +1,7 @@
 package searchengine.controllers;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -20,18 +20,12 @@ import java.nio.charset.StandardCharsets;
 @RestController
 @RequestMapping("/api")
 @Validated
+@RequiredArgsConstructor
 public class ApiController {
 
     private final StatisticsService statisticsService;
     private final IndexingSitesService indexingSitesService;
     private final SearchService searchService;
-
-    @Autowired
-    public ApiController(StatisticsService statisticsService, IndexingSitesService indexingSitesService, SearchService searchService) {
-        this.statisticsService = statisticsService;
-        this.indexingSitesService = indexingSitesService;
-        this.searchService = searchService;
-    }
 
     @GetMapping("/statistics")
     public ResponseEntity<StatisticsResponse> statistics() {
@@ -41,7 +35,8 @@ public class ApiController {
     @GetMapping("/startIndexing")
     public ResponseEntity<ApiResponse> startIndexing() {
         log.info("Запрос на старт индексации получен");
-        return indexingSitesService.startIndexing();
+        ApiResponse response = indexingSitesService.startIndexing().getBody();
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/stopIndexing")
@@ -56,17 +51,15 @@ public class ApiController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<ApiSearchResponse> search(@RequestParam(value = "query", required = false) String query,
-                                                    @RequestParam(value = "site", required = false) String url,
-                                                    @RequestParam(value = "offset", required = false) Integer offset,
-                                                    @RequestParam(value = "limit", required = false) Integer limit) {
-        log.info("Query: " + query + ", url: " + url + ", offset: " + offset + ", limit: " + limit);
-        if(url == null || url.isEmpty()) {
-            url = "";
-        }
-        else {
-            url = URLDecoder.decode(url, StandardCharsets.UTF_8);
-        }
-        return ResponseEntity.ok(searchService.search(query, url, offset, limit).getBody());
+    public ResponseEntity<ApiSearchResponse> search(
+            @RequestParam(value = "query", required = false) String query,
+            @RequestParam(value = "site", required = false) String url,
+            @RequestParam(value = "offset", required = false) Integer offset,
+            @RequestParam(value = "limit", required = false) Integer limit) {
+
+        log.info("query: {}, url: {}, offset: {}, limit: {}", query, url, offset, limit);
+        
+        String decodedUrl = (url == null || url.isEmpty()) ? "" : URLDecoder.decode(url, StandardCharsets.UTF_8);
+        return ResponseEntity.ok(searchService.search(query, decodedUrl, offset, limit).getBody());
     }
 }

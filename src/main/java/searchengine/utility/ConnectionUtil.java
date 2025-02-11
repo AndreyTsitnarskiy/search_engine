@@ -4,9 +4,6 @@ import lombok.experimental.UtilityClass;
 import lombok.extern.log4j.Log4j2;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.springframework.stereotype.Service;
-import searchengine.exceptions.SiteExceptions;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -28,17 +25,14 @@ public class ConnectionUtil {
     }
 
     public static int getStatusCode(String url) {
-        int code = 0;
         try {
-            URL siteURL = new URL(url);
-            HttpURLConnection connection = (HttpURLConnection) siteURL.openConnection();
+            HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
             connection.setRequestMethod("GET");
             connection.connect();
-            code = connection.getResponseCode();
-            connection.disconnect();
-        } catch (Exception e) {
-            e.printStackTrace();
+            return connection.getResponseCode();
+        } catch (IOException e) {
+            log.error("Ошибка при получении статуса URL {}: {}", url, e.getMessage());
+            return 500;
         }
-        return code;
     }
 }
