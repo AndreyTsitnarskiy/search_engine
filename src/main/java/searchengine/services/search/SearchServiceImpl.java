@@ -22,74 +22,46 @@ import java.util.stream.Collectors;
 public class SearchServiceImpl implements SearchService {
 
     private final RepositoryManager repositoryManager;
+    private static final int LEMMA_FREQUENCY_THRESHOLD_PERCENT = 10;
+    private static final int MAX_RESULTS = 500;
 
     @Override
     public ResponseEntity<ApiSearchResponse> search(String query, String url, int offset, int limit) {
         log.info("Search query: {}, site: {}, offset: {}, limit: {}", query, url, offset, limit);
 
         if (query == null || query.trim().isEmpty()) {
-            log.warn("Пустой поисковый запрос");
-            return errorResponse("Задан пустой поисковый запрос");
-        }
-
-        SiteEntity site = null;
-        if (!url.isEmpty()) {
-            site = repositoryManager.getSiteForSearchService(url);
-            if (site == null) {
-                log.warn("Сайт не найден: {}", url);
-                return errorResponse("Указанный сайт не найден в индексе");
-            }
+            return successResponse(0, Collections.emptyList());
         }
 
         List<String> lemmas = LemmaExecute.getLemmaList(query);
-        if (lemmas.isEmpty()) {
-            log.warn("Поисковый запрос не содержит значимых слов");
-            return errorResponse("Поисковый запрос не содержит значимых слов");
-        }
+        List<String> filteredLemmas = filterRareLemmas(lemmas);
 
-        // Исключаем слишком частые леммы
-        //lemmas = lemmaService.filterRareLemmas(lemmas);
-
-        List<PageEntity> pages = getRelevantPages(lemmas);
+        List<PageEntity> pages = getRelevantPages(filteredLemmas);
         if (pages.isEmpty()) {
             return successResponse(0, Collections.emptyList());
         }
 
-        List<ApiSearchResult> results = calculateRelevance(pages, lemmas);
-        log.info("Результаты поиска: {}", results.size());
-
-        // Пагинация
+        List<ApiSearchResult> results = calculateRelevance(pages, filteredLemmas);
         int total = results.size();
-        results = results.stream()
-                .skip(offset)
-                .limit(limit)
-                .collect(Collectors.toList());
+        results = results.stream().skip(offset).limit(limit).collect(Collectors.toList());
 
         return successResponse(total, results);
     }
 
-    private List<PageEntity> getRelevantPages(List<String> lemmas) {
-        // Берем самую редкую лемму
-        String rarestLemma = lemmas.get(0);
-        log.info("Самая редкая лемма: {}", rarestLemma);
-        List<PageEntity> pages = repositoryManager.getPagesForSearchService(rarestLemma);
-        log.info("Страницы для самой редкой леммы: {}", pages.size());
+    private List<String> filterRareLemmas(List<String> lemmas) {
+        int totalPages = repositoryManager.getTotalPageCount();
+        int threshold = (int) (totalPages * (LEMMA_FREQUENCY_THRESHOLD_PERCENT / 100.0));
 
-        // Фильтруем по остальным леммам
-        for (int i = 1; i < lemmas.size(); i++) {
-            String lemma = lemmas.get(i);
-            log.info("Фильтрация по лемме: {}", lemma);
-            List<PageEntity> filteredPages = repositoryManager.getPagesForSearchService(lemma);
-            log.info("Страницы для леммы {}: {}", lemma, filteredPages.size());
-            pages.retainAll(filteredPages);
-            log.info("Страницы после фильтрации: {}", pages.size());
-            if (pages.isEmpty()) break;
-        }
-        return pages;
+        return lemmas.stream()
+                .filter(lemma -> repositoryManager.getLemmaFrequency(lemma) < threshold)
+                .collect(Collectors.toList());
+    }
+
+    private List<PageEntity> getRelevantPages(List<String> lemmas) {
+        return repositoryManager.findTopPages(lemmas, lemmas.size(), MAX_RESULTS);
     }
 
     private List<ApiSearchResult> calculateRelevance(List<PageEntity> pages, List<String> lemmas) {
-        // Вычисляем абсолютную релевантность
         Map<PageEntity, Float> relevanceMap = new HashMap<>();
         float maxRelevance = 0;
 
@@ -100,13 +72,12 @@ public class SearchServiceImpl implements SearchService {
             maxRelevance = Math.max(maxRelevance, relevance);
         }
 
-        // Формируем результаты поиска
         List<ApiSearchResult> results = new ArrayList<>();
         for (PageEntity page : pages) {
             ApiSearchResult result = new ApiSearchResult();
-            result.setSite(page.getSite().getUrl() + page.getPath());
+            result.setSite(page.getSite().getUrl());
             result.setSiteName(page.getSite().getName());
-            result.setUrl(page.getSite().getUrl() + page.getPath());
+            result.setUrl(page.getPath());
             result.setTitle(extractTitle(page.getContent()));
             result.setSnippet(generateSnippet(page.getContent(), lemmas));
             result.setRelevance(relevanceMap.get(page) / maxRelevance);
@@ -114,13 +85,11 @@ public class SearchServiceImpl implements SearchService {
             results.add(result);
         }
 
-        // Сортируем по убыванию релевантности
         results.sort(Comparator.comparing(ApiSearchResult::getRelevance).reversed());
         return results;
     }
 
     private String generateSnippet(String content, List<String> lemmas) {
-        // Простейший алгоритм поиска фрагмента с совпадениями
         int snippetSize = 200;
         int index = -1;
         for (String lemma : lemmas) {
@@ -134,7 +103,6 @@ public class SearchServiceImpl implements SearchService {
         int end = Math.min(content.length(), start + snippetSize);
         String snippet = content.substring(start, end);
 
-        // Выделяем жирным найденные слова
         for (String lemma : lemmas) {
             snippet = snippet.replaceAll("(?i)" + lemma, "<b>" + lemma + "</b>");
         }
@@ -145,13 +113,6 @@ public class SearchServiceImpl implements SearchService {
     private String extractTitle(String content) {
         Matcher matcher = Pattern.compile("<title>(.*?)</title>").matcher(content);
         return matcher.find() ? matcher.group(1) : "Без заголовка";
-    }
-
-    private ResponseEntity<ApiSearchResponse> errorResponse(String message) {
-        ApiSearchResponse response = new ApiSearchResponse();
-        response.setResult(false);
-        response.setMessageError(message);
-        return ResponseEntity.badRequest().body(response);
     }
 
     private ResponseEntity<ApiSearchResponse> successResponse(int count, List<ApiSearchResult> data) {

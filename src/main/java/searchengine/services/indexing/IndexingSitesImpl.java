@@ -18,24 +18,30 @@ public class IndexingSitesImpl implements IndexingSitesService {
     private final IndexingStateManager indexingStateManager;
 
     @Override
-    public synchronized ResponseEntity<ApiResponse> startIndexing() {
+    public ResponseEntity<ApiResponse> startIndexing() {
         log.info("Запрос на старт индексации получен");
-        if (indexingStateManager.isIndexingManage()) {
+
+        if (!indexingStateManager.startIndexingManage()) {
             return ResponseEntity.ok(new ApiResponse(false, "Индексация уже запущена"));
         }
-        indexingStateManager.startIndexingManage();
+
         new Thread(() -> {
-            pageProcessService.indexingAllSites();
+            try {
+                pageProcessService.indexingAllSites();
+            } finally {
+                indexingStateManager.stopIndexingManage();
+            }
         }).start();
+
         return ResponseEntity.ok(new ApiResponse(true));
     }
 
     @Override
-    public synchronized ResponseEntity<ApiResponse> stopIndexing() {
-        if (!indexingStateManager.isIndexingManage()) {
+    public ResponseEntity<ApiResponse> stopIndexing() {
+        if (!indexingStateManager.stopIndexingManage()) {
             return ResponseEntity.ok(new ApiResponse(false, "Индексация не запущена"));
         }
-        indexingStateManager.stopIndexingManage();
+
         pageProcessService.stopIndexingNow();
         log.info("Остановка индексации");
         return ResponseEntity.ok(new ApiResponse(true));

@@ -54,9 +54,12 @@ public class SiteTaskRecursive extends RecursiveAction {
             PageEntity pageEntity = repositoryManager.processPage(uri, doc, siteEntity);
             siteTaskService.processLemmas(doc, siteEntity, pageEntity);
 
+/*Реализация с изменением статуса с failed на indexing если следующая задача успешно обработана
             if (statusManager.hasSiteErrors(siteEntity)) {
                 statusManager.updateStatusSiteIndexing(siteEntity);
             }
+*/
+
             Elements links = doc.select("a[href]");
             Set<SiteTaskRecursive> subTasks = createSubTasks(links);
             invokeAll(subTasks);

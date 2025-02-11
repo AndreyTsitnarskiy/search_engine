@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.entity.*;
+import searchengine.exceptions.SiteExceptions;
 import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
 import searchengine.repository.PageRepository;
@@ -43,8 +44,8 @@ public class RepositoryManager {
             siteEntity.setStatusTime(LocalDateTime.now());
             siteEntity.setStatus(Status.INDEXING);
             siteEntityList.add(siteEntity);
-            siteRepository.save(siteEntity);
         }
+        siteRepository.saveAll(siteEntityList);
         return siteEntityList;
     }
 
@@ -54,6 +55,11 @@ public class RepositoryManager {
 
     @Transactional
     public PageEntity processPage(String url, Document document, SiteEntity siteEntity) {
+        if (document == null) {
+            log.error("Ошибка: документ для URL {} не загружен", url);
+            throw new SiteExceptions("Ошибка загрузки страницы: " + url);
+        }
+
         PageEntity pageEntity = new PageEntity();
         pageEntity.setPath(url);
         pageEntity.setSite(siteEntity);
@@ -66,7 +72,7 @@ public class RepositoryManager {
     @Transactional
     public LemmaEntity processAndSaveLemma(SiteEntity siteEntity, String lemma) {
         String key = siteEntity.getId() + ":" + lemma;
-        locks.putIfAbsent(key, new Object());
+        locks.computeIfAbsent(key, k -> new Object());
 
         synchronized (locks.get(key)) {
             try {
@@ -133,11 +139,27 @@ public class RepositoryManager {
         return indexRepository.calculatePageRelevance(page, lemmas);
     }
 
-    public List<PageEntity> getPagesForSearchService(String lemma){
-        return pageRepository.findPagesByLemma(lemma);
+    public List<PageEntity> findTopPages(List<String> lemmas, int lemmaCount, int maxResults) {
+        return pageRepository.findPagesMatchingLemmas(lemmas, lemmaCount, maxResults);
     }
 
     public SiteEntity getSiteForSearchService(String url){
         return siteRepository.findByUrl(url);
+    }
+
+    public int getCountPagesFromRepository(SiteEntity siteEntity){
+        return pageRepository.countPageEntitiesBySite(siteEntity);
+    }
+
+    public int getCountLemmasFromRepository(SiteEntity siteEntity){
+        return lemmaRepository.countLemmasEntitiesBySite(siteEntity);
+    }
+
+    public int getTotalPageCount() {
+        return pageRepository.countTotalPages();
+    }
+
+    public int getLemmaFrequency(String lemma) {
+        return lemmaRepository.countLemmaFrequency(lemma);
     }
 }

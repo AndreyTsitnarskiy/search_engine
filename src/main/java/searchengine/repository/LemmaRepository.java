@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import searchengine.entity.LemmaEntity;
+import searchengine.entity.SiteEntity;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,4 +26,9 @@ public interface LemmaRepository extends JpaRepository<LemmaEntity, Integer> {
 
     @Query("SELECT l FROM LemmaEntity l JOIN IndexEntity it ON l.id = it.lemma.id WHERE it.page.id = :pageId")
     List<LemmaEntity> findUnusedLemmasBySite(@Param("pageId") int pageId);
+
+    int countLemmasEntitiesBySite(SiteEntity siteEntity);
+
+    @Query("SELECT COUNT(l) FROM LemmaEntity l WHERE l.lemma = :lemma")
+    int countLemmaFrequency(@Param("lemma") String lemma);
 }

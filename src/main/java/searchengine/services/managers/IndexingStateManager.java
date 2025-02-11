@@ -14,11 +14,11 @@ public class IndexingStateManager {
         return indexing.get();
     }
 
-    public void startIndexingManage() {
-        indexing.set(true);
+    public boolean startIndexingManage() {
+        return indexing.compareAndSet(false, true);
     }
 
-    public void stopIndexingManage() {
-        indexing.set(false);
+    public boolean stopIndexingManage() {
+        return indexing.compareAndSet(true, false);
     }
 }
